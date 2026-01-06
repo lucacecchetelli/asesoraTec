@@ -1,0 +1,30 @@
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background-color: antiquewhite;
+}
+
+.login-container {
+    width: 300px;
+    margin: 100px auto;
+    padding: 20px;
+    background: white;
+    border-radius: 8px;
+    text-align: center;
+}
+
+input {
+    width: 90%;
+    padding: 8px;
+    text-align: center;
+}
+
+button {
+    width: 95%;
+    padding: 8px;
+    cursor: pointer;
+}
+
+#error {
+    color: red;
+    font-size: 0.9em;
+}
