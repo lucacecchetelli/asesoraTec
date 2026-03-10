@@ -1,14 +1,384 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-    <style>
-        body {background-color: whitesmoke;}
-        h1 {color: blue;
-            font-family: verdana;
-            font-size: 200%;
-        }
-    </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Student | AsesoraTec</title>
+
+    <link rel="stylesheet" href="style.css" />
 </head>
+
+
+
 <body>
-<h1>Hello student</h1>
+    <div class="page-container">
+        <header class="header">
+            <h2>AsesoraTec</h2>
+            <div class="menu"></div>
+        </header>
+    
+        <main class="main">
+            <div class="login-box">
+    
+                <div class="filters-bar">
+                    <button class="nav-tab active" onclick="showTable()">Asesorías</button>
+                    <button class="nav-tab" onclick="showProfile()">Perfil</button>
+                </div>
+    
+                <!-- table -->
+                <div id="tableView" class="view active-view">
+                    <div class="filters-bar">
+                        <select id="timeFilter">
+                            <option value="all">Todos los horarios</option>
+                            <option value="15">15:30 – 16:30</option>
+                            <option value="16">16:30 – 17:30</option>
+                            <option value="17">17:30 – 18:30</option>
+                            <option value="18">18:30 – 19:30</option>
+                        </select>
+                        <select id="dayFilter">
+                            <option value="all">Todos los días</option>
+                            <option value="Lunes">Lunes</option>
+                            <option value="Martes">Martes</option>
+                            <option value="Miercoles">Miercoles</option>
+                            <option value="Jueves">Jueves</option>
+                            <option value="Viernes">Viernes</option>
+                        </select>
+                    </div>
+    
+                    <table class="student-table">
+                    <thead>
+                        <tr>
+                        <th>Materia</th>
+                        <th>Profesor</th>
+                        <th>Día</th>
+                        <th>Horario</th>
+                        <th>Cupo</th>
+                        <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+    
+                <!-- profile -->
+                <div id="profileView" class="view">
+                    <div class="profile-card">
+                        <h3>Perfil del Estudiante</h3>
+                        <p><strong>ID:</strong> A01</p>
+                        <p><strong>Nombre:</strong> —</p>
+                        <p><strong>Programa:</strong> —</p>
+                        <p><strong>Estatus:</strong> —</p>
+                    </div>
+    
+                    <br>
+    
+                    <div class="profile-card">
+                        <p><strong>Historial de asesorías asistidas:</strong></p>
+    
+                        <table class="student-table">
+                            <thead>
+                            <tr>
+                                <th>Materia</th>
+                                <th>Profesor</th>
+                                <th>Día</th>
+                                <th>Horario</th>
+                            </tr>
+                            </thead>
+                            <tbody id="historyBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+    
+            </div>
+        </main>
+    
+        <div id="confirmModal" class="modal hidden">
+            <div class="modal-backdrop"></div>
+    
+            <div class="modal-box">
+                <h3 id="modalTitle">Confirmar</h3>
+                <p id="modalMessage"></p>
+    
+                <div class="modal-actions">
+                    <button id="modalCancel" class="secondary-btn">Cancelar</button>
+                    <button id="modalConfirm" class="danger-btn">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    
+        <script>
+            const storedUsers = localStorage.getItem("users");
+    
+            let users = storedUsers
+                ? JSON.parse(storedUsers)
+                : {
+                    A01: { password: "password", enrolled: [] },
+                    A02: { password: "1234", enrolled: [] }
+                };
+    
+            localStorage.setItem("users", JSON.stringify(users));
+    
+            const currentUserId = localStorage.getItem("currentUser") || "A01";
+            const currentUser = users[currentUserId];
+    
+    
+            let pendingCancel = null;
+    
+            const modal = document.getElementById("confirmModal");
+            const modalMessage = document.getElementById("modalMessage");
+            const modalConfirm = document.getElementById("modalConfirm");
+            const modalCancel = document.getElementById("modalCancel");
+    
+            function openCancelModal(advisory) {
+                pendingCancel = advisory;
+                modalMessage.textContent = `Cancelar la asesoría de ${advisory.className}?`;
+                modal.classList.remove("hidden");
+            }
+    
+            const modalBox = modal.querySelector(".modal-box");
+    
+            function closeModal() {
+                modalBox.classList.add("closing");
+    
+                modalBox.addEventListener("animationend", function handler() {
+                    modal.classList.add("hidden");
+                    modalBox.classList.remove("closing");
+                    modalBox.removeEventListener("animationend", handler);
+                });
+            }
+    
+            modalCancel.addEventListener("click", () => {
+                pendingCancel = null;
+                closeModal();
+            });
+    
+            modalConfirm.addEventListener("click", () => {
+                if (!pendingCancel) return;
+    
+                cancelAdvisory(pendingCancel);
+                saveState();
+    
+                renderTable(advisories);
+                renderHistory(advisories);
+    
+                pendingCancel = null;
+                closeModal();
+            });
+    
+            function showTable() {
+                document.getElementById("tableView").classList.add("active-view");
+                document.getElementById("profileView").classList.remove("active-view");
+    
+                document.querySelectorAll(".nav-tab").forEach(t => t.classList.remove("active"));
+                document.querySelector(".nav-tab:nth-child(1)").classList.add("active");
+            }
+    
+            function showProfile() {
+                document.getElementById("profileView").classList.add("active-view");
+                document.getElementById("tableView").classList.remove("active-view");
+    
+                document.querySelectorAll(".nav-tab").forEach(t => t.classList.remove("active"));
+                document.querySelector(".nav-tab:nth-child(2)").classList.add("active");
+            }
+    
+            /* advisory initialization */
+    
+            const storedAdvisories = localStorage.getItem("advisories");
+    
+            let advisories = storedAdvisories
+                ? JSON.parse(storedAdvisories)
+                : [];
+    
+            if (advisories.length === 0) {
+                const activities = ["Español", "Ingles", "Física", "Expresión digital", "Matemáticas"];
+                const teachers = ["García", "López", "Martinez", "Ruiz"];
+                const days = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"]
+    
+                for (let i = 0; i < 5; i++) {
+                    const capacity = Math.floor(Math.random() * 10) + 15;
+                    const enrolled = Math.floor(Math.random() * capacity);
+    
+                    advisories.push({
+                        id: i,
+                        className: activities[Math.floor(Math.random() * activities.length)],
+                        teacher: teachers[Math.floor(Math.random() * teachers.length)],
+                        day: days[Math.floor(Math.random() * days.length)],
+                        time: `${15 + i}:30 – ${16 + i}:30`,
+                        capacity,
+                        enrolled
+                    });
+                }
+    
+                localStorage.setItem("advisories", JSON.stringify(advisories));
+            }
+    
+            function isJoined(advisoryId) {
+                return currentUser.enrolled.includes(advisoryId);
+            }
+    
+            function joinAdvisory(advisory) {
+                currentUser.enrolled.push(advisory.id);
+                advisory.enrolled++;
+            }
+    
+            function cancelAdvisory(advisory) {
+                currentUser.enrolled =
+                    currentUser.enrolled.filter(id => id !== advisory.id);
+                advisory.enrolled--;
+                if (advisory.enrolled < 0) advisory.enrolled = 0;
+            }
+    
+            function saveState() {
+                localStorage.setItem("users", JSON.stringify(users));
+                localStorage.setItem("advisories", JSON.stringify(advisories));
+            }
+    
+    
+            /* rendering the table */
+    
+            const tableBody = document.getElementById("tableBody");
+        
+            function renderTable(data) {
+                tableBody.innerHTML = "";
+    
+                const grouped = {};
+    
+                data.forEach(a => {
+                    if (!grouped[a.day]) grouped[a.day] = [];
+                    grouped[a.day].push(a);
+                });
+    
+                Object.keys(grouped).forEach(day => {
+    
+                    grouped[day].forEach(a => {
+                        const remaining = a.capacity - a.enrolled;
+                        const cupoClass =
+                            a.enrolled >= a.capacity
+                                ? "cupo-full"
+                                : a.enrolled / a.capacity >= 0.75
+                                    ? "cupo-warning"
+                                    : "cupo-ok";
+    
+    
+                        const row = document.createElement("tr");
+                        const joined = isJoined(a.id);
+    
+                        row.innerHTML = `
+                            <td>${a.className}</td>
+                            <td>${a.teacher}</td>
+                            <td>${a.day}</td>
+                            <td>${a.time}</td>
+                            <td class="${cupoClass}">
+                                ${a.enrolled}/${a.capacity}
+                                <div class="progress">
+                                    <div class="progress-fill" style="width: ${(a.enrolled / a.capacity) * 100}%"> </div>
+                                </div>
+                            </td>
+                            <td>
+                                <button class="join-btn ${joined ? "cancel" : ""}">
+                                    ${joined ? "Cancelar" : "Inscribirse"}
+                                </button>
+                            </td>
+                        `;
+    
+                        const button = row.querySelector(".join-btn");
+                        button.addEventListener("click", () => {
+                            if (!joined) {
+                                if (hasTimeConflict(a)) {
+                                    alert("Conflicto de horario.");
+                                    return;
+                                }
+                                if (a.enrolled >= a.capacity) return;
+    
+                                joinAdvisory(a);
+                            } else {
+                                openCancelModal(a);
+                                return;
+                            }
+    
+                            saveState();
+                            renderTable(advisories);
+                            renderHistory(advisories);
+                        });
+    
+                        tableBody.appendChild(row);
+                    });
+                });
+            }
+    
+            function hasTimeConflict(advisory) {
+                return advisories.some(a =>
+                    currentUser.enrolled.includes(a.id) &&
+                    a.day === advisory.day &&
+                    a.time === advisory.time &&
+                    a.id !== advisory.id
+                );
+            }
+    
+            function renderHistory(advisories) {
+                const historyBody = document.getElementById("historyBody");
+                historyBody.innerHTML = "";
+    
+                const joinedAdvisories = advisories.filter(a => currentUser.enrolled.includes(a.id));
+    
+                if (joinedAdvisories.length === 0) {
+                    historyBody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="empty-state">
+                        Aún no has asistido a ninguna asesoría
+                        </td>
+                    </tr>
+                    `;
+                    return;
+                }
+    
+                joinedAdvisories.forEach(a => {
+                    const row = document.createElement("tr");
+    
+                    row.innerHTML = `
+                        <td>${a.className}</td>
+                        <td>${a.teacher}</td>
+                        <td>${a.day}</td>
+                        <td>${a.time}</td>
+                    `;
+    
+                    historyBody.appendChild(row);
+                });
+            }
+    
+            const timeFilter = document.getElementById("timeFilter");
+            const dayFilter = document.getElementById("dayFilter");
+    
+            timeFilter.addEventListener("change", () => {
+            const value = timeFilter.value;
+    
+                if (value === "all") {
+                    renderTable(advisories);
+                } else {
+                    const filtered = advisories.filter(a =>
+                    a.time.startsWith(value)
+                    );
+                    renderTable(filtered);
+                }
+            });
+    
+            dayFilter.addEventListener("change", () => {
+            const value = dayFilter.value;
+    
+                if (value === "all") {
+                    renderTable(advisories);
+                } else {
+                    const filtered = advisories.filter(a =>
+                    a.day.startsWith(value)
+                    );
+                    renderTable(filtered);
+                }
+            });
+    
+            renderTable(advisories);
+            renderHistory(advisories);
+        </script>
+    </div>
+    
 </body>
+</html>

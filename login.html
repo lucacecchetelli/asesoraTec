@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login | AsesoraTec</title>
+
+    <link rel="stylesheet" href="style.css" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+    <header class="header">
+        <img src="logo-tec.png" alt="Tecnológico de Monterrey" />
+        <div class="menu"></div>
+    </header>
+
+
+    <main class="main">
+        <div class="login-box">
+            <div class="login-logo">
+            <img src="asesoratec.png" alt="asesoratec" width="250" height=/>
+            </div>
+
+            <h1 class="login-title">AsesoraTec</h1>
+
+            <form id="loginForm">
+                <div class="input-group">
+                    <input
+                        id="userId"
+                        type="text"
+                        placeholder="Usuario"
+                        autocomplete="username"
+                        required
+                    />
+                </div>
+
+                <div class="input-group">
+                    <input
+                        id="password"
+                        type="password"
+                        placeholder="Contraseña"
+                        autocomplete="current-password"
+                        required
+                    />
+                </div>
+
+                <button type="submit" class="login-btn">
+                    Ingresar
+                </button>
+
+                <p id="error" class="error-text"></p>
+            </form>
+
+            <script src="login.js"></script>
+
+            <div class="links">
+                <a href="#">¿Olvidaste tu contraseña?</a>
+                <a href="#">¿Necesitas ayuda? Contáctanos</a>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div>
+            <a href="#">Aviso de privacidad</a> · <a href="#">Ethos</a>
+        </div>
+        <div>
+            © 2026 Tecnológico de Monterrey
+        </div>
+    </footer>
+
+</body>
+</html>

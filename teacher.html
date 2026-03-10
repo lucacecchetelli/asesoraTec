@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Teacher | AsesoraTec</title>
+
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+    <div class="page-container">
+        <header class="header">
+            <h2>AsesoraTec</h2>
+            <div class="menu"></div>
+        </header>
+
+        <main class="main">
+            <div class="login-box">
+        
+                <div class="filters-bar">
+                    <button class="nav-tab active" onclick="showTabla()">Tabla</button>
+                    <button class="nav-tab" onclick="showAgenda()">Agenda</button>
+                </div>
+        
+                <div id="tablaView" class="view active-view">
+        
+                    <table class="teacher-table">
+                        <thead>
+                            <tr>
+                                <th>Clase</th>
+                                <th>Día</th>
+                                <th>Horario</th>
+                                <th>Lugar</th>
+                                <th>Cupo</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="teacherAdvisories"></tbody>
+                    </table>
+        
+                </div>
+        
+                <div id="agendaView" class="view">
+        
+                    <div class="schedule">
+
+                        <div class="schedule-header">
+                            <div class="time-slot empty"></div>
+                            <div class="day-header">Lunes</div>
+                            <div class="day-header">Martes</div>
+                            <div class="day-header">Miércoles</div>
+                            <div class="day-header">Jueves</div>
+                            <div class="day-header">Viernes</div>
+                        </div>
+                    
+                        <div class="schedule-grid-body" id="scheduleGrid"></div>
+                    
+                    </div>
+                </div>
+        
+                <div class="filters-bar" style="margin-top:20px;">
+                    <button class="join-btn" onclick="openAddModal()">
+                        Agregar asesoría
+                    </button>
+                </div>
+        
+            </div>
+        </main>
+    </div>
+
+    <div id="addModal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+    
+        <div class="modal-box">
+            <h3>Nueva Asesoría</h3>
+    
+            <select class="options-bar" id="classSelect">
+                <option value="">Selecciona clase</option>
+                <option>Matemáticas</option>
+                <option>Física</option>
+                <option>Inglés</option>
+                <option>Programación</option>
+            </select>
+    
+            <select class="options-bar" id="daySelect">
+                <option value="">Selecciona día</option>
+                <option>Lunes</option>
+                <option>Martes</option>
+                <option>Miércoles</option>
+                <option>Jueves</option>
+                <option>Viernes</option>
+            </select>
+    
+            <select class="options-bar" id="hourSelect">
+                <option value="">Selecciona hora</option>
+                <option value="7">07:00 - 08:00</option>
+                <option value="8">08:00 - 09:00</option>
+                <option value="9">09:00 - 10:00</option>
+                <option value="10">10:00 - 11:00</option>
+                <option value="11">11:00 - 12:00</option>
+                <option value="12">12:00 - 13:00</option>
+                <option value="13">13:00 - 14:00</option>
+                <option value="14">14:00 - 15:00</option>
+                <option value="15">15:00 - 16:00</option>
+                <option value="16">16:00 - 17:00</option>
+            </select>
+    
+            <select class="options-bar" id="placeSelect">
+                <option value="">Selecciona lugar</option>
+                <option>AI-2 (E)</option>
+                <option>AI-2 (O)</option>
+                <option>AI-3 (E)</option>
+                <option>AI-3 (O)</option>
+                <option>AI-4 (E)</option>
+                <option>AI-4 (O)</option>
+                <option>AI-5</option>
+                <option>AII-2 (E)</option>
+                <option>AII-2 (O)</option>
+                <option>AII-3 (E)</option>
+                <option>AII-3 (O)</option>
+                <option>AII-4 (E)</option>
+                <option>AII-4 (O)</option>
+                <option>AII-5</option>
+            </select>
+    
+            <input class="num-input" type="number" id="capacityInput" placeholder="Cupo máximo">
+    
+            <div class="modal-actions">
+                <button onclick="closeModal()" class="secondary-btn">Cancelar</button>
+                <button onclick="saveAdvisory()" class="primary-btn">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let teacherAdvisories = JSON.parse(localStorage.getItem("teacherAdvisories")) || [];
+    
+        const daysMap = {
+            "Lunes": 0,
+            "Martes": 1,
+            "Miércoles": 2,
+            "Jueves": 3,
+            "Viernes": 4
+        };
+    
+        function showTabla() {
+            document.getElementById("tablaView").classList.add("active-view");
+            document.getElementById("agendaView").classList.remove("active-view");
+    
+            document.querySelectorAll(".nav-tab").forEach(t => t.classList.remove("active"));
+            document.querySelector(".nav-tab:nth-child(1)").classList.add("active");
+        }
+    
+        function showAgenda() {
+            document.getElementById("agendaView").classList.add("active-view");
+            document.getElementById("tablaView").classList.remove("active-view");
+    
+            document.querySelectorAll(".nav-tab").forEach(t => t.classList.remove("active"));
+            document.querySelector(".nav-tab:nth-child(2)").classList.add("active");
+        }
+    
+        const addModal = document.getElementById("addModal");
+    
+        function openAddModal() {
+            addModal.classList.remove("hidden");
+        }
+    
+        function closeModal() {
+            addModal.classList.add("hidden");
+        }
+    
+        function saveAdvisory() {
+            const className = document.getElementById("classSelect").value;
+            const day = document.getElementById("daySelect").value;
+            const startHour = parseInt(document.getElementById("hourSelect").value);
+            const place = document.getElementById("placeSelect").value;
+            const capacity = parseInt(document.getElementById("capacityInput").value);
+    
+            if (!className || !day || !startHour || !place || !capacity) {
+                alert("Completa todos los campos.");
+                return;
+            }
+    
+            const conflict = teacherAdvisories.some(a =>
+                a.day === day &&
+                a.startHour === startHour
+            );
+    
+            if (conflict) {
+                alert("Ya existe una asesoría en ese horario.");
+                return;
+            }
+    
+            const newAdvisory = {
+                id: Date.now(),
+                className,
+                day,
+                startHour,
+                duration: 1,
+                place,
+                capacity,
+                enrolled: 0
+            };
+    
+            teacherAdvisories.push(newAdvisory);
+    
+            sortAdvisories();
+            localStorage.setItem("teacherAdvisories", JSON.stringify(teacherAdvisories));
+    
+            document.getElementById("classSelect").value = "";
+            document.getElementById("daySelect").value = "";
+            document.getElementById("hourSelect").value = "";
+            document.getElementById("placeSelect").value = "";
+            document.getElementById("capacityInput").value = "";
+    
+            closeModal();
+            renderTeacherTable();
+            renderTeacherAgenda();
+        }
+    
+        function renderTeacherTable() {
+            const tbody = document.getElementById("teacherAdvisories");
+            tbody.innerHTML = "";
+    
+            teacherAdvisories.forEach(a => {
+                const row = document.createElement("tr");
+    
+                row.innerHTML = `
+                    <td>${a.className}</td>
+                    <td>${a.day}</td>
+                    <td>${a.startHour}:00 - ${a.startHour + 1}:00</td>
+                    <td>${a.place}</td>
+                    <td>${a.capacity}</td>
+                    <td>
+                        <button class="secondary-btn cancel-btn">
+                            Cancelar
+                        </button>
+                    </td>
+                `;
+    
+                tbody.appendChild(row);
+                
+                // Selecting via the specific cancel-btn class added above
+                const cancelBtn = row.querySelector(".cancel-btn");
+                if (cancelBtn) {
+                    cancelBtn.addEventListener("click", () => {
+                        deleteAdvisory(a.id);
+                    });
+                }
+            });
+        }
+    
+        const scheduleGrid = document.getElementById("scheduleGrid");
+        const gridCells = [];
+    
+        function generateSchedule() {
+            scheduleGrid.innerHTML = "";
+            gridCells.length = 0;
+    
+            const startHour = 7;
+            const endHour = 18;
+    
+            for (let hour = startHour; hour <= endHour; hour++) {
+                const timeCell = document.createElement("div");
+                timeCell.classList.add("schedule-cell", "time");
+                timeCell.textContent = `${hour.toString().padStart(2,"0")}:00`;
+                scheduleGrid.appendChild(timeCell);
+    
+                for (let day = 0; day < 5; day++) {
+                    const cell = document.createElement("div");
+                    cell.classList.add("schedule-cell");
+    
+                    scheduleGrid.appendChild(cell);
+    
+                    gridCells.push({
+                        hour,
+                        dayIndex: day,
+                        element: cell
+                    });
+                }
+            }
+        }
+    
+        function renderTeacherAgenda() {
+            document.querySelectorAll(".event-block").forEach(e => e.remove());
+    
+            teacherAdvisories.forEach(advisory => {
+                const dayIndex = daysMap[advisory.day];
+    
+                const targetCell = gridCells.find(c =>
+                    c.hour === advisory.startHour &&
+                    c.dayIndex === dayIndex
+                );
+    
+                if (!targetCell) return;
+    
+                const block = document.createElement("div");
+                block.classList.add("event-block");
+    
+                block.classList.add(`subject-${advisory.className}`);
+    
+                block.innerHTML = `
+                    <strong>${advisory.className}</strong><br>
+                    ${advisory.place}
+                `;
+    
+                targetCell.element.appendChild(block);
+            });
+        }
+    
+        function sortAdvisories() {
+            teacherAdvisories.sort((a, b) => {
+                const dayDifference = daysMap[a.day] - daysMap[b.day];
+                if (dayDifference !== 0) return dayDifference;
+                return a.startHour - b.startHour;
+            });
+        }
+    
+        function deleteAdvisory(id) {
+            const advisory = teacherAdvisories.find(a => a.id === id);
+            if (!advisory) return;
+    
+            const message = advisory.enrolled > 0
+                ? `Hay ${advisory.enrolled} estudiantes inscritos.\n¿Seguro que deseas cancelarla?`
+                : "No hay estudiantes inscritos.\n¿Seguro que deseas cancelarla?";
+    
+            if (!confirm(message)) return;
+    
+            teacherAdvisories = teacherAdvisories.filter(a => a.id !== id);
+            localStorage.setItem("teacherAdvisories", JSON.stringify(teacherAdvisories));
+    
+            sortAdvisories();
+            renderTeacherTable();
+            renderTeacherAgenda();
+        }
+    
+        sortAdvisories();
+        generateSchedule();
+        renderTeacherTable();
+        renderTeacherAgenda();
+    </script>
+</body>
+

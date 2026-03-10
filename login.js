@@ -1,30 +1,45 @@
-const users = {
-    "L01": "admin",
-    "L02": "teacher",
-    "A01": "student"
-};
+const form = document.getElementById("loginForm");
 
-function login() {
+form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
     const userId = document.getElementById("userId").value.trim();
+    const password = document.getElementById("password").value;
     const error = document.getElementById("error");
 
-    if (userId === "") {
-        error.textContent = "Ingresa una matrícula/nómina válida";
+    if (!userId || !password) {
+        error.textContent = "Completa todos los campos";
         return;
     }
 
-    const userType = users[userId];
+    try {
+        const response = await fetch("/login", {
+            method: "POST",
+            credentials: "include",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ id: userId, password })
+        });
 
-    if (!userType) {
-        error.textContent = "Matrícula/Nómina inválida";
-        return;
-    }
+        const data = await response.json();
 
-    if (userType === "admin") {
-        window.location.href = "admin.html";
-    } else if (userType === "teacher") {
-        window.location.href = "teacher.html";
-    } else if (userType === "student") {
-        window.location.href = "student.html";
+        if (!response.ok) {
+            error.textContent = data.error || "Error al iniciar sesión";
+            return;
+        }
+
+        if (data.role === "admin") {
+            window.location.href = "admin.html";
+        } else if (data.role === "teacher") {
+            window.location.href = "teacher.html";
+        } else {
+            window.location.href = "student.html";
+        }
+
+    } catch (err) {
+        error.textContent = "Error del servidor";
     }
-}
+    
+});
+
