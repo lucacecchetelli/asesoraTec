@@ -12,6 +12,8 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 4000; 
 
+app.set('trust proxy', 1);
+
 export const db = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
