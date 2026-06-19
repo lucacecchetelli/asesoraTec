@@ -1,10 +1,10 @@
 import express from "express";
 import { db, studentDb } from "../server.js";
 
-export const router = express.Router();
+export const authRouter = express.authRouter();
 const UNIVERSAL_PASSWORD = "prepaTec2026";
 
-router.post('/login', async (req, res) => {
+authRouter.post('/login', async (req, res) => {
     if (!req.body.username || !req.body.password) {
         return res.status(400).json({ error: "Faltan datos" });
     }
@@ -53,7 +53,7 @@ router.post('/login', async (req, res) => {
     }
 });
 
-router.get('/me', (req, res) => {
+authRouter.get('/me', (req, res) => {
     if (req.session && req.session.user) {
         res.json(req.session.user);
     } else {
@@ -61,4 +61,4 @@ router.get('/me', (req, res) => {
     }
 });
 
-export default router;
+export default authRouter;
