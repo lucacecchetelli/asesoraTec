@@ -213,7 +213,7 @@
             updateAgendaHeaders();
 
             try {
-                const response = await fetch("/me");
+                const response = await fetch("/api/auth/me");
                 if (!response.ok) {
                     console.warn("User not authenticated, redirecting...");
                     window.location.href = "login.html";

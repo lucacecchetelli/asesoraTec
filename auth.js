@@ -1,7 +1,7 @@
 import express from "express";
-import { db, studentDb } from "../server.js";
+import { db } from "./server.js";
 
-export const authRouter = express.authRouter();
+export const authRouter = express.Router();
 const UNIVERSAL_PASSWORD = "prepaTec2026";
 
 authRouter.post('/login', async (req, res) => {
@@ -18,7 +18,7 @@ authRouter.post('/login', async (req, res) => {
                 return res.status(401).json({ error: "Contraseña incorrecta" });
             }
 
-            const [rows] = await studentDb.query("SELECT matricula FROM student_data WHERE matricula = ?", [userId]);
+            const [rows] = await db.query("SELECT matricula FROM student_data WHERE matricula = ?", [userId]);
             
             if (rows.length === 0) {
                 return res.status(404).json({ error: "Matrícula no encontrada" });

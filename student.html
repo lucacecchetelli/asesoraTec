@@ -110,7 +110,7 @@
 
             async function initializeStudentPage() {
                 try {
-                    const response = await fetch("/me");
+                    const response = await fetch("/api/auth/me");
                     if (!response.ok) throw new Error("Not logged in");
                     const user = await response.json();
                     currentStudentMatricula = user.id || user.matricula;

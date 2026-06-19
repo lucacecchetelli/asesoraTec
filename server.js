@@ -138,7 +138,11 @@ app.get('/api/students/:clave/:grupo', async (req, res) => {
     }
 });
 
-app.use(express.static(path.join(__dirname, "../asesoraTec")));
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'login.html'));
+});
+
+app.use(express.static(__dirname));
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
