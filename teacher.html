@@ -518,6 +518,10 @@
             });
         };
 
+        document.getElementById("cancelAddStudent").addEventListener("click", () => {
+            document.getElementById("addStudentModal").classList.add("hidden");
+        });
+
         document.getElementById("confirmAddStudent").addEventListener("click", () => {
             const checked = document.querySelectorAll(".student-checkbox:checked");
             if (checked.length === 0) return document.getElementById("addStudentError").textContent = "Selecciona al menos un alumno.";
