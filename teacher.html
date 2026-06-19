@@ -11,8 +11,7 @@
 <body>
     <div class="page-container">
         <header class="header">
-            <h2>AsesoraTec</h2>
-            <div class="menu"></div>
+            <a href="login.html" class="header-btn"><h2>AsesoraTec</h2></a>
         </header>
 
         <main class="main">
@@ -22,23 +21,21 @@
                     <button class="nav-tab active" onclick="showTabla()">Tabla</button>
                     <button class="nav-tab" onclick="showAgenda()">Agenda</button>
                 </div>
-        
+                
                 <div id="tablaView" class="view active-view">
-        
                     <table class="teacher-table">
                         <thead>
                             <tr>
-                                <th>Clase</th>
-                                <th>Día</th>
-                                <th>Horario</th>
-                                <th>Lugar</th>
-                                <th>Cupo</th>
-                                <th></th>
+                                <th style="width: 25%;">Clase</th>
+                                <th style="width: 10%;">Día</th>
+                                <th style="width: 15%;">Horario</th>
+                                <th style="width: 20%;">Lugar</th>
+                                <th style="width: 10%; text-align: center;">Cupo</th>
+                                <th style="width: 20%; text-align: center;">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="teacherAdvisories"></tbody>
                     </table>
-        
                 </div>
         
                 <div id="agendaView" class="view">
@@ -60,7 +57,7 @@
                 </div>
         
                 <div class="filters-bar" style="margin-top:20px;">
-                    <button class="join-btn" onclick="openAddModal()">
+                    <button id="addBtn" class="join-btn" onclick="openAddModal()" disabled>
                         Agregar asesoría
                     </button>
                 </div>
@@ -71,61 +68,60 @@
 
     <div id="addModal" class="modal hidden">
         <div class="modal-backdrop"></div>
-    
         <div class="modal-box">
             <h3>Nueva Asesoría</h3>
-    
-            <select class="options-bar" id="classSelect">
-                <option value="">Selecciona clase</option>
-                <option>Matemáticas</option>
-                <option>Física</option>
-                <option>Inglés</option>
-                <option>Programación</option>
-            </select>
-    
-            <select class="options-bar" id="daySelect">
+
+            <label style="color: white; font-size: 0.9rem; margin-bottom: 5px; display: block;">Clases / Grupos:</label>
+            <div id="classChecklist" style="background: var(--glass-bg); padding: 10px; border-radius: 8px; margin-bottom: 10px; max-height: 120px; overflow-y: auto;"></div>
+
+            <input type="text" id="advisoryTitle" placeholder="Título opcional (ej. Repaso Final)" class="options-bar" style="width: 100%; margin-bottom: 15px;">
+
+            <div style="margin-bottom: 15px; display: flex; gap: 20px; align-items: center;">
+                <label style="color: white; font-size: 0.9rem;">Tipo:</label>
+                <label style="color: white; font-size: 0.85rem; cursor: pointer; display: flex; gap: 5px;">
+                    <input type="radio" name="advisoryType" value="Única" checked> Única
+                </label>
+                <label style="color: white; font-size: 0.85rem; cursor: pointer; display: flex; gap: 5px;">
+                    <input type="radio" name="advisoryType" value="Recurrente"> Recurrente
+                </label>
+            </div>
+
+            <select class="options-bar" id="daySelect" style="width: 100%; margin-bottom: 10px;">
                 <option value="">Selecciona día</option>
-                <option>Lunes</option>
-                <option>Martes</option>
-                <option>Miércoles</option>
-                <option>Jueves</option>
-                <option>Viernes</option>
+                <option>Lunes</option><option>Martes</option><option>Miércoles</option>
+                <option>Jueves</option><option>Viernes</option>
             </select>
-    
-            <select class="options-bar" id="hourSelect">
-                <option value="">Selecciona hora</option>
-                <option value="7">07:00 - 08:00</option>
-                <option value="8">08:00 - 09:00</option>
-                <option value="9">09:00 - 10:00</option>
-                <option value="10">10:00 - 11:00</option>
-                <option value="11">11:00 - 12:00</option>
-                <option value="12">12:00 - 13:00</option>
-                <option value="13">13:00 - 14:00</option>
-                <option value="14">14:00 - 15:00</option>
-                <option value="15">15:00 - 16:00</option>
-                <option value="16">16:00 - 17:00</option>
-            </select>
-    
-            <select class="options-bar" id="placeSelect">
-                <option value="">Selecciona lugar</option>
-                <option>AI-2 (E)</option>
-                <option>AI-2 (O)</option>
-                <option>AI-3 (E)</option>
-                <option>AI-3 (O)</option>
-                <option>AI-4 (E)</option>
-                <option>AI-4 (O)</option>
-                <option>AI-5</option>
-                <option>AII-2 (E)</option>
-                <option>AII-2 (O)</option>
-                <option>AII-3 (E)</option>
-                <option>AII-3 (O)</option>
-                <option>AII-4 (E)</option>
-                <option>AII-4 (O)</option>
-                <option>AII-5</option>
-            </select>
-    
-            <input class="num-input" type="number" id="capacityInput" placeholder="Cupo máximo">
-    
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <div style="flex: 1;">
+                    <label style="color: #a0aec0; font-size: 0.8rem;">Inicio:</label>
+                    <input type="time" id="startTimeInput" class="options-bar" style="width: 100%; margin-bottom: 0;">
+                </div>
+                <div style="flex: 1;">
+                    <label style="color: #a0aec0; font-size: 0.8rem;">Fin:</label>
+                    <input type="time" id="endTimeInput" class="options-bar" style="width: 100%; margin-bottom: 0;">
+                </div>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; color: #a0aec0; font-size: 0.9rem;">Modalidad:</label>
+                <div style="display: flex; gap: 15px; color: white;">
+                    <label style="cursor: pointer;"><input type="radio" name="modality" value="Presencial" checked onchange="toggleLinkField()"> Presencial</label>
+                    <label style="cursor: pointer;"><input type="radio" name="modality" value="En línea" onchange="toggleLinkField()"> En línea</label>
+                </div>
+            </div>
+
+            <div id="placeContainer" style="margin-bottom: 15px;">
+                <select class="options-bar" id="placeSelect">
+                    <option value="">Selecciona lugar...</option>
+                    <option>Aulas I - Piso 5</option>
+                </select>
+            </div>
+            <div id="linkContainer" style="margin-bottom: 15px; display: none;">
+                <input type="text" id="meetingLinkInput" placeholder="Link de reunión..." style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #4a5568; background-color: rgba(255,255,255,0.05); color: white;">
+            </div>
+
+            <input class="num-input" type="number" id="capacityInput" placeholder="Cupo máximo" style="width: 100%; margin-bottom: 15px;">
+
             <div class="modal-actions">
                 <button onclick="closeModal()" class="secondary-btn">Cancelar</button>
                 <button onclick="saveAdvisory()" class="primary-btn">Guardar</button>
@@ -133,8 +129,74 @@
         </div>
     </div>
 
+    <div id="addStudentModal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-box">
+            <h3>Agregar Alumnos</h3>
+            <p id="addStudentTarget" style="margin-bottom: 15px; color: var(--text-muted);">Materia</p>
+            
+            <input type="text" id="studentSearchInput" placeholder="Buscar por nombre o matrícula..." class="options-bar" style="width: 100%; margin-bottom: 10px;" onkeyup="filterStudentList()">
+            
+            <div id="studentChecklist" style="background: var(--glass-bg); padding: 10px; border-radius: 8px; margin-bottom: 15px; max-height: 150px; overflow-y: auto;">
+                <p style="color: #a0aec0; font-size: 0.9rem;">Cargando alumnos...</p>
+            </div>
+            
+            <p id="addStudentError" style="color: #ff4d4d; font-size: 13px; min-height: 20px;"></p>
+
+            <div class="modal-actions">
+                <button id="cancelAddStudent" class="secondary-btn">Cancelar</button>
+                <button id="confirmAddStudent" class="primary-btn">Agregar Seleccionados</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="attendanceModal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-box">
+            <h3>Lista de Asistencia</h3>
+            <p id="attendanceTarget" style="margin-bottom: 15px; color: var(--text-muted);">Materia</p>
+            
+            <div id="attendanceList" style="background: var(--glass-bg); padding: 10px; border-radius: 8px; margin-bottom: 15px; max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
+            </div>
+
+            <div class="modal-actions">
+                <button onclick="closeAttendanceModal()" class="secondary-btn">Cerrar</button>
+                <button id="saveAttendanceBtn" class="primary-btn" style="background-color: #2ecc71;">Guardar Asistencia</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="detailsModal" class="details-modal hidden">
+        <div class="details-backdrop" onclick="closeDetailsModal()"></div>
+        <div class="details-modal-box">
+            <div class="details-modal-header" id="detailsModalHeader">
+                <h3 class="details-modal-title" id="detailsModalTitle">Título</h3>
+                <button class="close-details-btn" onclick="closeDetailsModal()">×</button>
+            </div>
+            <div class="details-modal-body">
+                <div class="details-row">
+                    <span class="details-label">Horario:</span>
+                    <span class="details-value" id="detailsModalTime">00:00 - 00:00</span>
+                </div>
+                <div class="details-row">
+                    <span class="details-label">Lugar:</span>
+                    <span class="details-value" id="detailsModalPlace">Lugar</span>
+                </div>
+                <div class="details-row">
+                    <span class="details-label">Profesor:</span>
+                    <span class="details-value" id="detailsModalProfesor">Profesor</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
     <script>
-        let teacherAdvisories = JSON.parse(localStorage.getItem("teacherAdvisories")) || [];
+        let currentUserId = "";
+        let currentTeacherName = "";
+        let selectedAdvisoryColor = "#3498db";
+        let teacherAdvisories = [];
+        let allSystemStudents = [];
     
         const daysMap = {
             "Lunes": 0,
@@ -143,7 +205,125 @@
             "Jueves": 3,
             "Viernes": 4
         };
-    
+        const scheduleGrid = document.getElementById("scheduleGrid");
+        const gridCells = [];
+
+        async function initializeTeacherPage() {
+            generateSchedule();
+            updateAgendaHeaders();
+
+            try {
+                const response = await fetch("/me");
+                if (!response.ok) {
+                    console.warn("User not authenticated, redirecting...");
+                    window.location.href = "login.html";
+                    return;
+                }
+
+                const user = await response.json();
+                console.log("Full User Object received:", user);
+
+                currentUserId = user.id || user.nomina;
+                currentTeacherName = user.name;
+                await loadAllStudents();
+
+                if (currentUserId) {
+                    console.log("Welcome,", currentTeacherName, "ID:", currentUserId);
+
+                    const storedData = localStorage.getItem(`teacherAdvisories_${currentUserId}`);
+                    teacherAdvisories = JSON.parse(storedData) || [];
+
+                    try {
+                        await loadTeacherClasses(currentUserId);
+                    } catch (e) {
+                        console.error("Could not load classes from server:", e);
+                    }
+
+                    sortAdvisories();
+                    renderTeacherTable();
+                    renderTeacherAgenda();
+
+                    const addBtn = document.getElementById("addBtn");
+                    if (addBtn) addBtn.disabled = false;
+
+                } else {
+                    alert("Session Error: ID not found in user data.");
+                }
+            } catch (err) {
+                console.error("Initialization failed:", err);
+                if (err.message === "Not logged in") {
+                    window.location.href = "login.html";
+                }
+            }
+        }
+
+        async function loadAllStudents() {
+            try {
+                const response = await fetch('/api/students');
+                if (response.ok) {
+                    allSystemStudents = await response.json();
+                }
+            } catch (err) {
+                console.error("Error loading students:", err);
+            }
+        }
+
+        async function loadTeacherClasses(userNomina) {
+            const container = document.getElementById('classChecklist');
+            if (!container) return;
+
+            container.innerHTML = '<p style="padding:10px; font-size:0.8rem; color:rgba(255,255,255,0.5);">Cargando...</p>';
+
+            try {
+                const response = await fetch(`/api/classes/${userNomina}`);
+                const classes = await response.json();
+
+                if (!classes || classes.length === 0) {
+                    container.innerHTML = '<p style="padding:10px; font-size:0.8rem; color: #ff6b6b;">No classes found.</p>';
+                    return;
+                }
+
+                container.innerHTML = '';
+                classes.forEach(classRow => {
+                    const clave = classRow.clave || "N/A";
+                    const materia = classRow.materia || "Materia";
+                    const grupo = classRow.grupo || "0";
+                    
+                    const displayLabel = `${clave} - ${materia} (Gpo ${grupo})`;
+                    const dataValue = `${clave}|${grupo}`;
+                    
+                    const div = document.createElement('div');
+                    div.style.padding = "8px 12px";
+                    div.style.borderBottom = "1px solid rgba(255,255,255,0.05)";
+                    div.innerHTML = `
+                        <label style="color: white; display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0;">
+                            <input type="checkbox" value="${dataValue}" data-name="${materia}" class="class-checkbox">
+                            <span style="font-size: 0.9rem;">${displayLabel}</span>
+                        </label>
+                    `;
+                    container.appendChild(div);
+                });
+            } catch (error) {
+                console.error("Error loading classes:", error);
+            }
+        }
+
+        function toggleLinkField() {
+            const modality = document.querySelector('input[name="modality"]:checked').value;
+            const linkContainer = document.getElementById('linkContainer');
+            const placeContainer = document.getElementById('placeContainer');
+            
+            if (modality === 'En línea') {
+                linkContainer.style.display = 'block';
+                placeContainer.style.display = 'none';
+                document.getElementById("placeSelect").value = "";
+            } else {
+                linkContainer.style.display = 'none';
+                placeContainer.style.display = 'block';
+                document.getElementById("meetingLinkInput").value = "";
+            }
+        }
+
         function showTabla() {
             document.getElementById("tablaView").classList.add("active-view");
             document.getElementById("agendaView").classList.remove("active-view");
@@ -159,107 +339,59 @@
             document.querySelectorAll(".nav-tab").forEach(t => t.classList.remove("active"));
             document.querySelector(".nav-tab:nth-child(2)").classList.add("active");
         }
-    
-        const addModal = document.getElementById("addModal");
-    
-        function openAddModal() {
-            addModal.classList.remove("hidden");
+
+        function selectPresetColor(element, color) {
+            document.querySelectorAll('.preset-color').forEach(btn => btn.classList.remove('active'));
+            element.classList.add('active');
+            selectedAdvisoryColor = color;
         }
     
+        const addModal = document.getElementById("addModal");
+        function openAddModal() {
+            resetAddModalFields();
+            addModal.classList.remove("hidden");
+        }
         function closeModal() {
             addModal.classList.add("hidden");
         }
-    
-        function saveAdvisory() {
-            const className = document.getElementById("classSelect").value;
-            const day = document.getElementById("daySelect").value;
-            const startHour = parseInt(document.getElementById("hourSelect").value);
-            const place = document.getElementById("placeSelect").value;
-            const capacity = parseInt(document.getElementById("capacityInput").value);
-    
-            if (!className || !day || !startHour || !place || !capacity) {
-                alert("Completa todos los campos.");
-                return;
-            }
-    
-            const conflict = teacherAdvisories.some(a =>
-                a.day === day &&
-                a.startHour === startHour
-            );
-    
-            if (conflict) {
-                alert("Ya existe una asesoría en ese horario.");
-                return;
-            }
-    
-            const newAdvisory = {
-                id: Date.now(),
-                className,
-                day,
-                startHour,
-                duration: 1,
-                place,
-                capacity,
-                enrolled: 0
-            };
-    
-            teacherAdvisories.push(newAdvisory);
-    
-            sortAdvisories();
-            localStorage.setItem("teacherAdvisories", JSON.stringify(teacherAdvisories));
-    
-            document.getElementById("classSelect").value = "";
-            document.getElementById("daySelect").value = "";
-            document.getElementById("hourSelect").value = "";
-            document.getElementById("placeSelect").value = "";
-            document.getElementById("capacityInput").value = "";
-    
-            closeModal();
-            renderTeacherTable();
-            renderTeacherAgenda();
+
+        const detailsModal = document.getElementById("detailsModal");
+        function closeDetailsModal() {
+            detailsModal.classList.add("hidden");
         }
-    
-        function renderTeacherTable() {
-            const tbody = document.getElementById("teacherAdvisories");
-            tbody.innerHTML = "";
-    
-            teacherAdvisories.forEach(a => {
-                const row = document.createElement("tr");
-    
-                row.innerHTML = `
-                    <td>${a.className}</td>
-                    <td>${a.day}</td>
-                    <td>${a.startHour}:00 - ${a.startHour + 1}:00</td>
-                    <td>${a.place}</td>
-                    <td>${a.capacity}</td>
-                    <td>
-                        <button class="secondary-btn cancel-btn">
-                            Cancelar
-                        </button>
-                    </td>
-                `;
-    
-                tbody.appendChild(row);
-                
-                // Selecting via the specific cancel-btn class added above
-                const cancelBtn = row.querySelector(".cancel-btn");
-                if (cancelBtn) {
-                    cancelBtn.addEventListener("click", () => {
-                        deleteAdvisory(a.id);
-                    });
-                }
-            });
+
+        function openDetailsModal(id) {
+            const advisory = teacherAdvisories.find(a => a.id === id);
+            if (!advisory) return;
+
+            document.getElementById("detailsModalTitle").textContent = advisory.className;
+            
+            const formatTime = (h, m) => `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+            const startTimeStr = formatTime(advisory.startHour, advisory.startMinutes);
+            const endTimeStr = formatTime(advisory.startHour + 1, advisory.startMinutes);
+            document.getElementById("detailsModalTime").textContent = `${startTimeStr} hrs - ${endTimeStr} hrs`;
+            
+            let placeHtml = `${advisory.place} <br> <span style="font-size: 0.85rem; color: #a0aec0;">Modalidad: ${advisory.modality || 'Presencial'}</span>`;
+
+            if (advisory.modality === 'En línea' && advisory.meetingLink) {
+                placeHtml += `<br><a href="${advisory.meetingLink}" target="_blank" style="color: #3498db; text-decoration: underline; font-size: 0.9rem; margin-top: 5px; display: inline-block;">🔗 Unirse a la reunión</a>`;
+            }
+            document.getElementById("detailsModalPlace").innerHTML = placeHtml;
+            
+            document.getElementById("detailsModalProfesor").textContent = advisory.profesor || "Profesor Registrado";
+
+            const header = document.getElementById("detailsModalHeader");
+            header.style.backgroundColor = advisory.color || '#1a4a9c';
+
+            detailsModal.classList.remove("hidden");
         }
-    
-        const scheduleGrid = document.getElementById("scheduleGrid");
-        const gridCells = [];
     
         function generateSchedule() {
             scheduleGrid.innerHTML = "";
             gridCells.length = 0;
     
             const startHour = 7;
-            const endHour = 18;
+            const endHour = 22;
     
             for (let hour = startHour; hour <= endHour; hour++) {
                 const timeCell = document.createElement("div");
@@ -281,34 +413,312 @@
                 }
             }
         }
-    
+
+        function saveAdvisory() {
+            const checkedBoxes = document.querySelectorAll('.class-checkbox:checked');
+            if (checkedBoxes.length === 0) return alert("Selecciona al menos una clase.");
+
+            const titleInput = document.getElementById("advisoryTitle").value.trim();
+            const day = document.getElementById("daySelect").value;
+            const startTimeStr = document.getElementById("startTimeInput").value;
+            const endTimeStr = document.getElementById("endTimeInput").value;
+            const capacity = parseInt(document.getElementById("capacityInput").value);
+
+            if (!day || !startTimeStr || !endTimeStr || isNaN(capacity)) {
+                return alert("Completa los campos de horario y capacidad.");
+            }
+
+            const [startHourInt, startMinutesInt] = startTimeStr.split(':').map(Number);
+            const [endHourInt, endMinutesInt] = endTimeStr.split(':').map(Number);
+            
+            const durationMins = (endHourInt * 60 + endMinutesInt) - (startHourInt * 60 + startMinutesInt);
+            if (durationMins <= 0) return alert("La hora de fin debe ser posterior a la de inicio.");
+
+            checkedBoxes.forEach(selectedBox => {
+                const [clave, grupo] = selectedBox.value.split('|');
+                const materiaName = selectedBox.getAttribute('data-name');
+                const finalName = titleInput ? `${titleInput} (${materiaName})` : materiaName;
+
+                const newAdvisory = {
+                    id: Date.now() + Math.floor(Math.random() * 1000),
+                    title: titleInput,
+                    className: finalName,
+                    clave: clave,
+                    grupo: grupo,
+                    type: document.querySelector('input[name="advisoryType"]:checked').value,
+                    modality: document.querySelector('input[name="modality"]:checked').value,
+                    day,
+                    startHour: startHourInt,
+                    startMinutes: startMinutesInt,
+                    durationMinutes: durationMins,
+                    place: document.getElementById("placeSelect").value,
+                    capacity,
+                    color: selectedAdvisoryColor,
+                    profesor: currentTeacherName,
+                    enrolled: 0,
+                    enrolledStudents: [],
+                    attendedStudents: [],
+                    studentNotes: {}
+                };
+
+                teacherAdvisories.push(newAdvisory);
+            });
+
+            localStorage.setItem(`teacherAdvisories_${currentUserId}`, JSON.stringify(teacherAdvisories));
+            closeModal();
+            renderTeacherTable();
+            renderTeacherAgenda();
+        }
+        
+        window.openAddStudentModal = async function(advisoryId) {
+            currentAdvisoryForStudent = teacherAdvisories.find(a => a.id === advisoryId);
+            document.getElementById("addStudentTarget").textContent = currentAdvisoryForStudent.className;
+            document.getElementById("studentSearchInput").value = "";
+            
+            const checklist = document.getElementById("studentChecklist");
+            checklist.innerHTML = '<p style="color: #a0aec0; font-size: 0.9rem;">Cargando alumnos...</p>';
+            document.getElementById("addStudentError").textContent = "";
+            document.getElementById("addStudentModal").classList.remove("hidden");
+
+            try {
+                const response = await fetch(`/api/students/${currentAdvisoryForStudent.clave}/${currentAdvisoryForStudent.grupo}`);
+                const filteredStudents = await response.json();
+                const enrolled = currentAdvisoryForStudent.enrolledStudents || [];
+                
+                checklist.innerHTML = "";
+                let availableCount = 0;
+
+                filteredStudents.forEach(student => {
+                    if (!enrolled.includes(student.matricula)) {
+                        availableCount++;
+                        const studentName = student.nombre || "Sin Nombre";
+                        const div = document.createElement("div");
+                        div.className = "student-item";
+                        div.style = "padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 10px;";
+                        div.innerHTML = `
+                            <input type="checkbox" value="${student.matricula}" class="student-checkbox" style="cursor: pointer; width: 16px; height: 16px;">
+                            <span class="student-text" style="color: white; font-size: 0.9rem;">${studentName} <span style="color: #a0aec0;">(${student.matricula})</span></span>
+                        `;
+                        checklist.appendChild(div);
+                    }
+                });
+
+                if (availableCount === 0) checklist.innerHTML = "<p style='color: white;'>Todos los alumnos del grupo ya están inscritos.</p>";
+            } catch (err) {
+                checklist.innerHTML = "<p style='color: #ff4d4d;'>Error al cargar alumnos.</p>";
+            }
+        };
+
+        window.filterStudentList = function() {
+            const query = document.getElementById("studentSearchInput").value.toLowerCase();
+            const items = document.querySelectorAll(".student-item");
+            items.forEach(item => {
+                const text = item.querySelector(".student-text").textContent.toLowerCase();
+                item.style.display = text.includes(query) ? "flex" : "none";
+            });
+        };
+
+        document.getElementById("confirmAddStudent").addEventListener("click", () => {
+            const checked = document.querySelectorAll(".student-checkbox:checked");
+            if (checked.length === 0) return document.getElementById("addStudentError").textContent = "Selecciona al menos un alumno.";
+
+            if (!currentAdvisoryForStudent.enrolledStudents) currentAdvisoryForStudent.enrolledStudents = [];
+
+            checked.forEach(cb => {
+                currentAdvisoryForStudent.enrolledStudents.push(cb.value);
+                currentAdvisoryForStudent.enrolled++;
+            });
+            
+            localStorage.setItem(`teacherAdvisories_${currentUserId}`, JSON.stringify(teacherAdvisories));
+            renderTeacherTable(); 
+            document.getElementById("addStudentModal").classList.add("hidden");
+        });
+
+        window.openAttendanceModal = function(advisoryId) {
+            currentOpenAdvisoryId = advisoryId;
+            const advisory = teacherAdvisories.find(a => a.id === advisoryId);
+            if (!advisory) return;
+
+            document.getElementById("attendanceTarget").textContent = advisory.className;
+            const listDiv = document.getElementById("attendanceList");
+            listDiv.innerHTML = "";
+
+            const enrolled = advisory.enrolledStudents || [];
+            const attended = advisory.attendedStudents || [];
+            const notes = advisory.studentNotes || {};
+            
+            if (enrolled.length === 0) {
+                listDiv.innerHTML = "<p style='color: white; font-size: 0.9rem; text-align: center;'>No hay alumnos inscritos.</p>";
+                document.getElementById("saveAttendanceBtn").style.display = "none";
+            } else {
+                document.getElementById("saveAttendanceBtn").style.display = "block";
+                enrolled.forEach((matricula) => {
+                    const studentObj = allSystemStudents.find(s => s.matricula === matricula);
+                    const studentName = studentObj && studentObj.nombre ? studentObj.nombre : "";
+
+                    const isChecked = attended.includes(matricula) ? "checked" : "";
+                    const currentNote = notes[matricula] || "";
+
+                    const row = document.createElement("div");
+                    row.className = "attendance-row";
+                    row.style = "background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);";
+                    
+                    row.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span style="color: white; font-weight: bold; font-size: 0.9rem;">${matricula} - ${studentName}</span>
+                            <input type="checkbox" class="attendance-check" data-matricula="${matricula}" ${isChecked} style="width: 18px; height: 18px; cursor: pointer;">
+                        </div>
+                        <input type="text" class="attendance-note" data-matricula="${matricula}" placeholder="Añadir nota sobre el alumno..." value="${currentNote}" style="width: 100%; padding: 6px; border-radius: 4px; border: 1px solid #4a5568; background-color: rgba(255,255,255,0.05); color: white; font-size: 0.8rem;">
+                    `;
+                    listDiv.appendChild(row);
+                });
+            }
+            document.getElementById("attendanceModal").classList.remove("hidden");
+        };
+
+        window.closeAttendanceModal = function() {
+            document.getElementById("attendanceModal").classList.add("hidden");
+        };
+
+        document.getElementById("saveAttendanceBtn").onclick = function() {
+            const advisoryIndex = teacherAdvisories.findIndex(a => a.id === currentOpenAdvisoryId);
+            if (advisoryIndex === -1) return;
+
+            const checkboxes = document.querySelectorAll(".attendance-check");
+            let newlyAttended = [];
+
+            checkboxes.forEach(cb => {
+                if (cb.checked) {
+                    newlyAttended.push(cb.getAttribute("data-matricula"));
+                }
+            });
+            
+            document.querySelectorAll(".attendance-note").forEach(input => {
+                const mat = input.getAttribute("data-matricula");
+                teacherAdvisories[advisoryIndex].studentNotes[mat] = input.value.trim();
+            });
+
+            teacherAdvisories[advisoryIndex].attendedStudents = newlyAttended;
+
+            localStorage.setItem(`teacherAdvisories_${currentUserId}`, JSON.stringify(teacherAdvisories));
+            
+            alert("Asistencia guardada correctamente.");
+            closeAttendanceModal();
+            renderTeacherTable();
+        };
+
+        window.notifyStudents = function(advisoryId) {
+            const advisory = teacherAdvisories.find(a => a.id === advisoryId);
+            if (!advisory || !advisory.enrolledStudents || advisory.enrolledStudents.length === 0) {
+                alert("No hay alumnos inscritos para notificar.");
+                return;
+            }
+            alert(`Notificación enviada exitosamente a los ${advisory.enrolled} alumno(s) inscritos en la asesoría de ${advisory.className}.`);
+        };
+
         function renderTeacherAgenda() {
             document.querySelectorAll(".event-block").forEach(e => e.remove());
-    
+
             teacherAdvisories.forEach(advisory => {
                 const dayIndex = daysMap[advisory.day];
-    
+
                 const targetCell = gridCells.find(c =>
                     c.hour === advisory.startHour &&
                     c.dayIndex === dayIndex
                 );
-    
+
                 if (!targetCell) return;
-    
+
                 const block = document.createElement("div");
                 block.classList.add("event-block");
-    
-                block.classList.add(`subject-${advisory.className}`);
-    
+
+                const safeCSSClass = advisory.className.replace(/[^a-zA-Z0-9]/g, '-');
+                block.classList.add(`subject-${safeCSSClass}`);
+
+                block.style.backgroundColor = advisory.color || '#3498db';
+                block.style.color = "#ffffff";
+
+                block.style.position = "absolute";
+                block.style.left = "4px";
+                block.style.width = "calc(100% - 4px)";
+                block.style.height = "calc(100% - 4px)";
+                block.style.zIndex = "10";
+
+                if (advisory.startMinutes === 30) {
+                    block.style.top = "50%";
+                } else {
+                    block.style.top = "2px";
+                }
+
                 block.innerHTML = `
-                    <strong>${advisory.className}</strong><br>
-                    ${advisory.place}
+                    <div class="block-content">
+                        <strong>${advisory.className}(Gpo ${advisory.grupo || 'N/A'})</strong><br>
+                        ${advisory.place}
+                    </div>
                 `;
-    
+                
+                block.addEventListener("click", () => openDetailsModal(advisory.id));
+
                 targetCell.element.appendChild(block);
             });
         }
-    
+
+        function renderTeacherTable() {
+            const tbody = document.getElementById("teacherAdvisories");
+            tbody.innerHTML = "";
+
+            teacherAdvisories.forEach(a => {
+                const row = document.createElement("tr");
+
+                const format = (h, m) => `${h.toString().padStart(2,'0')}:${m.toString().padStart(2, '0')}`;
+                const startTime = format(a.startHour, a.startMinutes);
+                const endTime = format(a.startHour + 1, a.startMinutes);
+                
+                const timeStr = `${startTime} hrs - ${endTime} hrs`;
+                const isFull = a.enrolled >= a.capacity;
+
+                const targetDate = getAdvisoryTargetDate(a.day, a.startHour, a.startMinutes);
+                const dateDisplay = a.type === 'Única' 
+                    ? `${a.day} ${targetDate.getDate()}/${targetDate.getMonth() + 1}` 
+                    : a.day;
+
+                row.innerHTML = `
+                    <td>${a.className} (Gpo ${a.grupo || 'N/A'})</td>
+                    <td>${a.day}</td>
+                    <td>${timeStr}</td>
+                    <td>${a.place}</td>
+                    <td style="color: ${isFull ? '#ff4d4d' : 'inherit'}; text-align: center;">
+                        ${a.enrolled}/${a.capacity}
+                    </td>
+                    <td>
+                        <div class="actions-cell" style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                            <button class="join-btn" onclick="openAttendanceModal(${a.id})" style="background-color: #2ecc71;">
+                                Lista
+                            </button>
+                            <button class="join-btn" onclick="openAddStudentModal(${a.id})" ${isFull ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
+                                + Alumno
+                            </button>
+                            <button class="join-btn" onclick="notifyStudents(${a.id})" style="background-color: #f39c12;">
+                                Notificar
+                            </button>
+                            <button class="join-btn cancel cancel-btn" style="background-color: #e74c3c;">
+                                Eliminar
+                            </button>
+                        </div>
+                    </td>
+                `;
+
+                tbody.appendChild(row);
+                
+                const cancelBtn = row.querySelector(".cancel-btn");
+                if (cancelBtn) {
+                    cancelBtn.addEventListener("click", () => {
+                        deleteAdvisory(a.id);
+                    });
+                }
+            });
+        }
+
         function sortAdvisories() {
             teacherAdvisories.sort((a, b) => {
                 const dayDifference = daysMap[a.day] - daysMap[b.day];
@@ -316,29 +726,80 @@
                 return a.startHour - b.startHour;
             });
         }
-    
+
+        function resetAddModalFields() {
+            document.querySelectorAll('.class-checkbox').forEach(cb => cb.checked = false);
+            document.querySelector('input[name="advisoryType"][value="Única"]').checked = true;
+            document.getElementById("advisoryTitle").value = "";
+            document.getElementById("daySelect").value = "";
+            document.getElementById("startTimeInput").value = "";
+            document.getElementById("endTimeInput").value = "";
+            document.getElementById("capacityInput").value = "";
+
+            document.querySelector('input[name="modality"][value="Presencial"]').checked = true;
+            document.getElementById("linkContainer").style.display = "none";
+            document.getElementById("placeContainer").style.display = "block";
+            document.getElementById("meetingLinkInput").value = "";
+            document.getElementById("placeSelect").value = "";
+        }
+
         function deleteAdvisory(id) {
             const advisory = teacherAdvisories.find(a => a.id === id);
             if (!advisory) return;
-    
+
             const message = advisory.enrolled > 0
                 ? `Hay ${advisory.enrolled} estudiantes inscritos.\n¿Seguro que deseas cancelarla?`
                 : "No hay estudiantes inscritos.\n¿Seguro que deseas cancelarla?";
-    
+
             if (!confirm(message)) return;
-    
+
             teacherAdvisories = teacherAdvisories.filter(a => a.id !== id);
-            localStorage.setItem("teacherAdvisories", JSON.stringify(teacherAdvisories));
-    
+            
+            localStorage.setItem(`teacherAdvisories_${currentUserId}`, JSON.stringify(teacherAdvisories));
+
             sortAdvisories();
             renderTeacherTable();
             renderTeacherAgenda();
         }
-    
-        sortAdvisories();
-        generateSchedule();
-        renderTeacherTable();
-        renderTeacherAgenda();
+
+        function getAdvisoryTargetDate(dayString, startHour, startMinutes) {
+            const exactDaysMap = { "Lunes": 1, "Martes": 2, "Miércoles": 3, "Jueves": 4, "Viernes": 5 };
+            const now = new Date();
+            const currentDayOfWeek = now.getDay() || 7;
+            
+            const monday = new Date(now);
+            monday.setDate(now.getDate() - currentDayOfWeek + 1);
+            monday.setHours(0, 0, 0, 0);
+
+            const targetDate = new Date(monday);
+            targetDate.setDate(monday.getDate() + (exactDaysMap[dayString] - 1));
+            targetDate.setHours(startHour, startMinutes, 0, 0);
+
+            if (targetDate < now) {
+                targetDate.setDate(targetDate.getDate() + 7);
+            }
+
+            return targetDate;
+        }
+
+        function updateAgendaHeaders() {
+            const now = new Date();
+            const currentDayOfWeek = now.getDay() || 7;
+            
+            const monday = new Date(now);
+            monday.setDate(now.getDate() - currentDayOfWeek + 1);
+
+            const dayNames = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
+            const headers = document.querySelectorAll('.day-header');
+
+            headers.forEach((header, i) => {
+                const d = new Date(monday);
+                d.setDate(monday.getDate() + i);
+                header.innerHTML = `<span style="display:block; font-size: 0.8rem; opacity: 0.7;">${d.getDate()}</span>${dayNames[i]}`;
+            });
+        }
+
+        initializeTeacherPage();
     </script>
 </body>
-
+</html>

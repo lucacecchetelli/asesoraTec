@@ -13,33 +13,23 @@ form.addEventListener("submit", async (e) => {
     }
 
     try {
-        const response = await fetch("/login", {
-            method: "POST",
-            credentials: "include",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ id: userId, password })
+        const response = await fetch('/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: userId, password: password })
         });
 
         const data = await response.json();
 
-        if (!response.ok) {
-            error.textContent = data.error || "Error al iniciar sesión";
-            return;
-        }
-
-        if (data.role === "admin") {
-            window.location.href = "admin.html";
-        } else if (data.role === "teacher") {
-            window.location.href = "teacher.html";
+        if (data.success) {
+            window.location.href = data.redirect;
         } else {
-            window.location.href = "student.html";
+            error.textContent = data.error;
         }
 
     } catch (err) {
+        console.error("Login catch error:", err);
         error.textContent = "Error del servidor";
     }
-    
 });
 
