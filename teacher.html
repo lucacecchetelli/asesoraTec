@@ -208,6 +208,40 @@
         const scheduleGrid = document.getElementById("scheduleGrid");
         const gridCells = [];
 
+        function getMergeKey(a) {
+            return [a.clave, a.day, a.startHour, a.startMinutes, a.place, a.modality].join('|');
+        }
+
+        function groupAdvisoriesForMerge(advisories) {
+            const groups = [];
+            const groupMap = new Map();
+            advisories.forEach(a => {
+                const key = getMergeKey(a);
+                if (!groupMap.has(key)) {
+                    const g = { key, items: [] };
+                    groupMap.set(key, g);
+                    groups.push(g);
+                }
+                groupMap.get(key).items.push(a);
+            });
+            return groups;
+        }
+
+        function getCurrentWeekDate(dayString) {
+            const exactDaysMap = { "Lunes": 1, "Martes": 2, "Miércoles": 3, "Jueves": 4, "Viernes": 5 };
+            const now = new Date();
+            const currentDayOfWeek = now.getDay() || 7;
+
+            const monday = new Date(now);
+            monday.setDate(now.getDate() - currentDayOfWeek + 1);
+            monday.setHours(0, 0, 0, 0);
+
+            const targetDate = new Date(monday);
+            targetDate.setDate(monday.getDate() + (exactDaysMap[dayString] - 1));
+
+            return targetDate;
+        }
+
         async function initializeTeacherPage() {
             generateSchedule();
             updateAgendaHeaders();
@@ -458,6 +492,8 @@
                     enrolled: 0,
                     enrolledStudents: [],
                     attendedStudents: [],
+                    attendanceHistory: [],
+                    sessionClosed: false,
                     studentNotes: {}
                 };
 
@@ -588,6 +624,7 @@
             const advisoryIndex = teacherAdvisories.findIndex(a => a.id === currentOpenAdvisoryId);
             if (advisoryIndex === -1) return;
 
+            const advisory = teacherAdvisories[advisoryIndex];
             const checkboxes = document.querySelectorAll(".attendance-check");
             let newlyAttended = [];
 
@@ -599,16 +636,43 @@
             
             document.querySelectorAll(".attendance-note").forEach(input => {
                 const mat = input.getAttribute("data-matricula");
-                teacherAdvisories[advisoryIndex].studentNotes[mat] = input.value.trim();
+                advisory.studentNotes[mat] = input.value.trim();
             });
 
-            teacherAdvisories[advisoryIndex].attendedStudents = newlyAttended;
+            if (!advisory.attendanceHistory) advisory.attendanceHistory = [];
+
+            const occurrenceDate = getCurrentWeekDate(advisory.day);
+            newlyAttended.forEach(matricula => {
+                advisory.attendanceHistory.push({
+                    matricula,
+                    historyDate: occurrenceDate.toISOString(),
+                    clave: advisory.clave,
+                    className: advisory.className,
+                    day: advisory.day,
+                    startHour: advisory.startHour,
+                    startMinutes: advisory.startMinutes,
+                    place: advisory.place,
+                    profesor: advisory.profesor,
+                    modality: advisory.modality
+                });
+            });
+
+            if (advisory.type === 'Recurrente') {
+                advisory.enrolledStudents = [];
+                advisory.enrolled = 0;
+                advisory.attendedStudents = [];
+                advisory.studentNotes = {};
+            } else {
+                advisory.attendedStudents = newlyAttended;
+                advisory.sessionClosed = true;
+            }
 
             localStorage.setItem(`teacherAdvisories_${currentUserId}`, JSON.stringify(teacherAdvisories));
             
             alert("Asistencia guardada correctamente.");
             closeAttendanceModal();
             renderTeacherTable();
+            renderTeacherAgenda();
         };
 
         window.notifyStudents = function(advisoryId) {
@@ -623,11 +687,15 @@
         function renderTeacherAgenda() {
             document.querySelectorAll(".event-block").forEach(e => e.remove());
 
-            teacherAdvisories.forEach(advisory => {
-                const dayIndex = daysMap[advisory.day];
+            const groups = groupAdvisoriesForMerge(teacherAdvisories);
+
+            groups.forEach(g => {
+                const items = g.items;
+                const first = items[0];
+                const dayIndex = daysMap[first.day];
 
                 const targetCell = gridCells.find(c =>
-                    c.hour === advisory.startHour &&
+                    c.hour === first.startHour &&
                     c.dayIndex === dayIndex
                 );
 
@@ -636,10 +704,10 @@
                 const block = document.createElement("div");
                 block.classList.add("event-block");
 
-                const safeCSSClass = advisory.className.replace(/[^a-zA-Z0-9]/g, '-');
+                const safeCSSClass = first.className.replace(/[^a-zA-Z0-9]/g, '-');
                 block.classList.add(`subject-${safeCSSClass}`);
 
-                block.style.backgroundColor = advisory.color || '#3498db';
+                block.style.backgroundColor = first.color || '#3498db';
                 block.style.color = "#ffffff";
 
                 block.style.position = "absolute";
@@ -648,20 +716,24 @@
                 block.style.height = "calc(100% - 4px)";
                 block.style.zIndex = "10";
 
-                if (advisory.startMinutes === 30) {
+                if (first.startMinutes === 30) {
                     block.style.top = "50%";
                 } else {
                     block.style.top = "2px";
                 }
 
+                const groupLabel = items.length > 1
+                    ? `Gpos ${items.map(i => i.grupo || 'N/A').join(', ')}`
+                    : `Gpo ${first.grupo || 'N/A'}`;
+
                 block.innerHTML = `
                     <div class="block-content">
-                        <strong>${advisory.className}(Gpo ${advisory.grupo || 'N/A'})</strong><br>
-                        ${advisory.place}
+                        <strong>${first.className} (${groupLabel})</strong><br>
+                        ${first.place}
                     </div>
                 `;
-                
-                block.addEventListener("click", () => openDetailsModal(advisory.id));
+
+                block.addEventListener("click", () => openDetailsModal(first.id));
 
                 targetCell.element.appendChild(block);
             });
@@ -671,55 +743,65 @@
             const tbody = document.getElementById("teacherAdvisories");
             tbody.innerHTML = "";
 
-            teacherAdvisories.forEach(a => {
-                const row = document.createElement("tr");
+            const groups = groupAdvisoriesForMerge(teacherAdvisories);
+
+            groups.forEach(g => {
+                const items = g.items;
+                const first = items[0];
+                const rowCount = items.length;
 
                 const format = (h, m) => `${h.toString().padStart(2,'0')}:${m.toString().padStart(2, '0')}`;
-                const startTime = format(a.startHour, a.startMinutes);
-                const endTime = format(a.startHour + 1, a.startMinutes);
-                
+                const startTime = format(first.startHour, first.startMinutes);
+                const endTime = format(first.startHour + 1, first.startMinutes);
                 const timeStr = `${startTime} hrs - ${endTime} hrs`;
-                const isFull = a.enrolled >= a.capacity;
 
-                const targetDate = getAdvisoryTargetDate(a.day, a.startHour, a.startMinutes);
-                const dateDisplay = a.type === 'Única' 
-                    ? `${a.day} ${targetDate.getDate()}/${targetDate.getMonth() + 1}` 
-                    : a.day;
+                const targetDate = getAdvisoryTargetDate(first.day, first.startHour, first.startMinutes);
+                const dateDisplay = `${first.day} ${targetDate.getDate()}/${targetDate.getMonth() + 1}`;
 
-                row.innerHTML = `
-                    <td>${a.className} (Gpo ${a.grupo || 'N/A'})</td>
-                    <td>${a.day}</td>
-                    <td>${timeStr}</td>
-                    <td>${a.place}</td>
-                    <td style="color: ${isFull ? '#ff4d4d' : 'inherit'}; text-align: center;">
-                        ${a.enrolled}/${a.capacity}
-                    </td>
-                    <td>
-                        <div class="actions-cell" style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                            <button class="join-btn" onclick="openAttendanceModal(${a.id})" style="background-color: #2ecc71;">
-                                Lista
-                            </button>
-                            <button class="join-btn" onclick="openAddStudentModal(${a.id})" ${isFull ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
-                                + Alumno
-                            </button>
-                            <button class="join-btn" onclick="notifyStudents(${a.id})" style="background-color: #f39c12;">
-                                Notificar
-                            </button>
-                            <button class="join-btn cancel cancel-btn" style="background-color: #e74c3c;">
-                                Eliminar
-                            </button>
-                        </div>
-                    </td>
-                `;
+                items.forEach((a, idx) => {
+                    const row = document.createElement("tr");
+                    const isFull = a.enrolled >= a.capacity;
 
-                tbody.appendChild(row);
-                
-                const cancelBtn = row.querySelector(".cancel-btn");
-                if (cancelBtn) {
-                    cancelBtn.addEventListener("click", () => {
-                        deleteAdvisory(a.id);
-                    });
-                }
+                    let cells = "";
+                    if (idx === 0) {
+                        cells += `<td rowspan="${rowCount}">${first.className}</td>`;
+                        cells += `<td rowspan="${rowCount}">${dateDisplay}</td>`;
+                        cells += `<td rowspan="${rowCount}">${timeStr}</td>`;
+                        cells += `<td rowspan="${rowCount}">${first.place}</td>`;
+                    }
+
+                    cells += `
+                        <td style="color: ${isFull ? '#ff4d4d' : 'inherit'}; text-align: center;">
+                            Gpo ${a.grupo || 'N/A'}: ${a.enrolled}/${a.capacity}
+                        </td>
+                        <td>
+                            <div class="actions-cell" style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                                <button class="join-btn" onclick="openAttendanceModal(${a.id})" style="background-color: #2ecc71;">
+                                    Lista
+                                </button>
+                                <button class="join-btn" onclick="openAddStudentModal(${a.id})" ${isFull ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
+                                    + Alumno
+                                </button>
+                                <button class="join-btn" onclick="notifyStudents(${a.id})" style="background-color: #f39c12;">
+                                    Notificar
+                                </button>
+                                <button class="join-btn cancel cancel-btn" style="background-color: #e74c3c;">
+                                    Eliminar
+                                </button>
+                            </div>
+                        </td>
+                    `;
+
+                    row.innerHTML = cells;
+                    tbody.appendChild(row);
+
+                    const cancelBtn = row.querySelector(".cancel-btn");
+                    if (cancelBtn) {
+                        cancelBtn.addEventListener("click", () => {
+                            deleteAdvisory(a.id);
+                        });
+                    }
+                });
             });
         }
 

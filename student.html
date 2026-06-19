@@ -108,6 +108,45 @@
             let studentClaves = [];
             let allSystemAdvisories = [];
 
+            function getAdvisoryTargetDate(dayString, startHour, startMinutes) {
+                const exactDaysMap = { "Lunes": 1, "Martes": 2, "Miércoles": 3, "Jueves": 4, "Viernes": 5 };
+                const now = new Date();
+                const currentDayOfWeek = now.getDay() || 7;
+
+                const monday = new Date(now);
+                monday.setDate(now.getDate() - currentDayOfWeek + 1);
+                monday.setHours(0, 0, 0, 0);
+
+                const targetDate = new Date(monday);
+                targetDate.setDate(monday.getDate() + (exactDaysMap[dayString] - 1));
+                targetDate.setHours(startHour, startMinutes, 0, 0);
+
+                if (targetDate < now) {
+                    targetDate.setDate(targetDate.getDate() + 7);
+                }
+
+                return targetDate;
+            }
+
+            function getMergeKey(a) {
+                return [a.clave, a.day, a.startHour, a.startMinutes, a.place, a.modality].join('|');
+            }
+
+            function groupAdvisoriesForMerge(advisories) {
+                const groups = [];
+                const groupMap = new Map();
+                advisories.forEach(a => {
+                    const key = getMergeKey(a);
+                    if (!groupMap.has(key)) {
+                        const g = { key, items: [] };
+                        groupMap.set(key, g);
+                        groups.push(g);
+                    }
+                    groupMap.get(key).items.push(a);
+                });
+                return groups;
+            }
+
             async function initializeStudentPage() {
                 try {
                     const response = await fetch("/api/auth/me");
@@ -177,11 +216,9 @@
             }
 
             function renderAll() {
-                const availableBody = document.getElementById("availableBody");
                 const registeredBody = document.getElementById("registeredBody");
                 const historyBody = document.getElementById("historyBody");
 
-                availableBody.innerHTML = "";
                 registeredBody.innerHTML = "";
                 historyBody.innerHTML = "";
 
@@ -192,32 +229,33 @@
 
                 let available = [];
                 let registered = [];
-                let history = [];
 
                 relevantAdvisories.forEach(a => {
                     const enrolledList = a.enrolledStudents || [];
-                    const attendedList = a.attendedStudents || [];
-                    
                     const isEnrolled = enrolledList.includes(currentStudentMatricula);
-                    const hasAttended = attendedList.includes(currentStudentMatricula);
+                    const isClosed = a.sessionClosed || false;
 
-                    if (hasAttended) {
-                        history.push(a);
-                    } else if (isEnrolled) {
+                    if (isEnrolled && !isClosed) {
                         registered.push(a);
-                    } else if (a.enrolled < a.capacity) {
+                    } else if (!isClosed && a.enrolled < a.capacity) {
                         available.push(a);
                     }
                 });
 
+                let history = [];
+                allSystemAdvisories.forEach(a => {
+                    (a.attendanceHistory || []).forEach(record => {
+                        if (record.matricula === currentStudentMatricula) {
+                            history.push(record);
+                        }
+                    });
+                });
+                history.sort((x, y) => new Date(y.historyDate) - new Date(x.historyDate));
+
                 if (classFilter !== "ALL") available = available.filter(a => a.clave === classFilter);
                 if (dayFilter !== "ALL") available = available.filter(a => a.day === dayFilter);
 
-                if (available.length === 0) {
-                    availableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #a0aec0; padding: 20px;">No hay asesorías disponibles.</td></tr>`;
-                } else {
-                    available.forEach(a => availableBody.appendChild(createRowHTML(a, 'available')));
-                }
+                renderAvailableMerged(available);
 
                 if (registered.length === 0) {
                     registeredBody.innerHTML = `<tr><td style="text-align: center; color: #a0aec0; padding: 20px;">No tienes asesorías próximas.</td></tr>`;
@@ -228,15 +266,84 @@
                 if (history.length === 0) {
                     historyBody.innerHTML = `<tr><td style="text-align: center; color: #a0aec0; padding: 20px;">No hay historial de asistencias.</td></tr>`;
                 } else {
-                    history.forEach(a => historyBody.appendChild(createRowHTML(a, 'history')));
+                    history.forEach(record => historyBody.appendChild(createRowHTML(record, 'history')));
                 }
+            }
+
+            function renderAvailableMerged(available) {
+                const availableBody = document.getElementById("availableBody");
+                availableBody.innerHTML = "";
+
+                if (available.length === 0) {
+                    availableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #a0aec0; padding: 20px;">No hay asesorías disponibles.</td></tr>`;
+                    return;
+                }
+
+                const groups = groupAdvisoriesForMerge(available);
+
+                groups.forEach(g => {
+                    const items = g.items;
+                    const first = items[0];
+                    const rowCount = items.length;
+
+                    const format = (h, m) => `${h.toString().padStart(2,'0')}:${m.toString().padStart(2, '0')}`;
+                    const timeStr = `${format(first.startHour, first.startMinutes)} - ${format(first.startHour + 1, first.startMinutes)}`;
+
+                    const displayName = (first.clave && first.className && first.clave !== first.className)
+                        ? `${first.clave} - ${first.className}`
+                        : (first.className || first.clave);
+
+                    const targetDate = getAdvisoryTargetDate(first.day, first.startHour, first.startMinutes);
+                    const dateDisplay = `${first.day} ${targetDate.getDate()}/${targetDate.getMonth() + 1}`;
+
+                    items.forEach((a, idx) => {
+                        const row = document.createElement("tr");
+                        let cells = "";
+
+                        if (idx === 0) {
+                            cells += `
+                                <td rowspan="${rowCount}" style="padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                    <strong style="display:block;">${displayName}</strong>
+                                    <small style="color: #a0aec0;">Prof: ${first.profesor || 'N/A'}</small>
+                                </td>
+                                <td rowspan="${rowCount}" style="padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.05);">${dateDisplay}</td>
+                                <td rowspan="${rowCount}" style="padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.05);">${timeStr}</td>
+                                <td rowspan="${rowCount}" style="padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                    ${first.modality || 'Presencial'}<br>
+                                    <small style="color: #a0aec0;">${first.place || ''}</small>
+                                </td>
+                            `;
+                        }
+
+                        cells += `
+                            <td style="padding: 12px 10px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); font-weight: bold; color: #3498db;">
+                                Gpo ${a.grupo || 'N/A'}: ${a.enrolled}/${a.capacity}
+                            </td>
+                            <td style="padding: 12px 10px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                <button class="join-btn" style="background-color: #3498db;" onclick="registerForAdvisory('${a.id}', '${a.teacherId}')">Inscribirse</button>
+                            </td>
+                        `;
+
+                        row.innerHTML = cells;
+                        availableBody.appendChild(row);
+                    });
+                });
             }
 
             function createRowHTML(a, type) {
                 const row = document.createElement("tr");
                 const format = (h, m) => `${h.toString().padStart(2,'0')}:${m.toString().padStart(2, '0')}`;
                 const timeStr = `${format(a.startHour, a.startMinutes)} - ${format(a.startHour + 1, a.startMinutes)}`;
-                
+
+                let dayDisplay;
+                if (a.historyDate) {
+                    const d = new Date(a.historyDate);
+                    dayDisplay = `${a.day} ${d.getDate()}/${d.getMonth() + 1}`;
+                } else {
+                    const targetDate = getAdvisoryTargetDate(a.day, a.startHour, a.startMinutes);
+                    dayDisplay = `${a.day} ${targetDate.getDate()}/${targetDate.getMonth() + 1}`;
+                }
+
                 const displayName = (a.clave && a.className && a.clave !== a.className)
                     ? `${a.clave} - ${a.className}`
                     : (a.className || a.clave);
@@ -247,17 +354,12 @@
                         <strong style="display:block;">${displayName}</strong>
                         <small style="color: #a0aec0;">Prof: ${a.profesor || 'N/A'}</small>
                     </td>
-                    <td style="padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.05);">${a.day}</td>
+                    <td style="padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.05);">${dayDisplay}</td>
                     <td style="padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.05);">${timeStr}</td>
                     <td style="padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.05);">${a.place}</td>
                 `;
 
-                if (type === 'available') {
-                    actionHtml = `<button class="join-btn" style="background-color: #3498db;" onclick="registerForAdvisory('${a.id}', '${a.teacherId}')">Inscribirse</button>`;
-                    rowData += `<td style="padding: 12px 10px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); font-weight: bold; color: #3498db;">${a.enrolled}/${a.capacity}</td>`;
-                    rowData += `<td style="padding: 12px 10px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">${actionHtml}</td>`;
-                }
-                else if (type === 'registered') {
+                if (type === 'registered') {
                     let buttons = `<button class="join-btn" style="background-color: #e74c3c;" onclick="cancelRegistration('${a.id}', '${a.teacherId}')">Cancelar</button>`;
                     if (a.modality === 'En línea' && a.meetingLink) {
                         buttons = `<a href="${a.meetingLink}" target="_blank" class="join-btn" style="background-color: #2ecc71; text-decoration: none; display: inline-block; margin-right: 5px;">Link</a>` + buttons;
