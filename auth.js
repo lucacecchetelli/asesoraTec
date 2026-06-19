@@ -1,7 +1,7 @@
 import express from "express";
 import { db, studentDb } from "../server.js";
 
-const router = express.Router();
+export const router = express.Router();
 const UNIVERSAL_PASSWORD = "prepaTec2026";
 
 router.post('/login', async (req, res) => {
