@@ -6,6 +6,15 @@
     <title>Teacher | AsesoraTec</title>
 
     <link rel="stylesheet" href="style.css" />
+    <style>
+        /* Native select dropdowns inherit the element's text colour, which on some
+           OS/browser combos (Windows Chrome) renders white text on a white background.
+           Explicitly setting background and colour on <option> fixes this everywhere. */
+        select option {
+            background-color: #2d3748;
+            color: white;
+        }
+    </style>
 </head>
 
 <body>
@@ -499,6 +508,7 @@
                     startMinutes: startMinutesInt,
                     durationMinutes: durationMins,
                     place: document.getElementById("placeSelect").value,
+                    meetingLink: document.getElementById("meetingLinkInput").value.trim(),
                     capacity,
                     color: selectedAdvisoryColor,
                     profesor: currentTeacherName,
@@ -739,10 +749,12 @@
                     ? `Gpos ${items.map(i => i.grupo || 'N/A').join(', ')}`
                     : `Gpo ${first.grupo || 'N/A'}`;
 
+                const blockPlace = first.modality === 'En línea' ? '🔗 En línea' : first.place;
+
                 block.innerHTML = `
                     <div class="block-content">
                         <strong>${first.className} (${groupLabel})</strong><br>
-                        ${first.place}
+                        ${blockPlace}
                     </div>
                 `;
 
@@ -771,6 +783,10 @@
                 const targetDate = getAdvisoryTargetDate(first.day, first.startHour, first.startMinutes);
                 const dateDisplay = `${first.day} ${targetDate.getDate()}/${targetDate.getMonth() + 1}`;
 
+                const placeDisplay = first.modality === 'En línea'
+                    ? `<span style="color: #3498db;">🔗 En línea</span>${first.meetingLink ? `<br><a href="${first.meetingLink}" target="_blank" style="color: #3498db; font-size: 0.8rem; text-decoration: underline;">Ver link</a>` : ''}`
+                    : first.place;
+
                 items.forEach((a, idx) => {
                     const row = document.createElement("tr");
                     const isFull = a.enrolled >= a.capacity;
@@ -780,7 +796,7 @@
                         cells += `<td rowspan="${rowCount}">${first.className}</td>`;
                         cells += `<td rowspan="${rowCount}">${dateDisplay}</td>`;
                         cells += `<td rowspan="${rowCount}">${timeStr}</td>`;
-                        cells += `<td rowspan="${rowCount}">${first.place}</td>`;
+                        cells += `<td rowspan="${rowCount}">${placeDisplay}</td>`;
                     }
 
                     cells += `
