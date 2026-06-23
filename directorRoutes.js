@@ -53,6 +53,34 @@ export function registerDirectorRoutes(app, db) {
     return todas;
   }
 
+  app.get('/api/asesorias-recientes', async (req, res) => {
+    // Validamos que exista una sesión activa de director
+    if (!req.session || !req.session.user || req.session.user.role !== 'director') {
+      return res.status(401).json({ error: "No autorizado o sesión expirada" });
+    }
+
+    const directorName = req.session.user.name;
+
+    try {
+      const sql = `
+        SELECT
+          sn.nombre AS alumno,
+          sd.matricula,
+          sd.programa,
+          sd.estatus_academico AS estatus
+        FROM student_data sd
+        INNER JOIN student_names sn ON sd.matricula = sn.matricula
+        WHERE sd.dir_programa = ?
+      `;
+      
+      const [rows] = await db.query(sql, [directorName]);
+      res.json(rows);
+    } catch (err) {
+      console.error("[Director] Error al obtener alumnos de tu programa:", err);
+      res.status(500).json({ error: "Error interno del servidor" });
+    }
+  });
+
   // LÍNEA -> asesorías REALES por día de la semana  { programa, total }
   // (se reutiliza el campo 'programa' como etiqueta del eje X = día)
   app.get('/api/asesorias-por-dia', async (req, res) => {
