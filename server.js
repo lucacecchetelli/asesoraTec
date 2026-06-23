@@ -5,6 +5,7 @@ import mysql from "mysql2/promise";
 import path from "path";
 import { fileURLToPath } from "url";
 import authRouter from "./auth.js";
+import { registerDirectorRoutes } from './directorRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,6 +23,7 @@ export const db = mysql.createPool({
     port: process.env.DB_PORT || 3306 
 });
 
+
 app.use(express.json());
 
 app.use(session({
@@ -36,6 +38,7 @@ app.use(session({
 }));
 
 app.use("/api/auth", authRouter);
+registerDirectorRoutes(app, db);
 
 app.get('/api/students', async (req, res) => {
     try {
