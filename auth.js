@@ -29,9 +29,20 @@ authRouter.post('/login', async (req, res) => {
         }
         
         else if (userId.startsWith('L')) {
-            const [rows] = await db.query("SELECT profesor FROM teacher_data WHERE nomina = ?", [userId]);
+            const [directorRows] = await db.query("SELECT nombre FROM director_data WHERE nomina = ?", [userId]);
 
-            if (rows.length === 0) {
+            if (directorRows.length > 0) {
+                if (password !== UNIVERSAL_PASSWORD) {
+                    return res.status(401).json({ error: "Contraseña incorrecta" });
+                }
+                
+                req.session.user = { id: userId, role: 'director', name: directorRows[0].nombre };
+                return res.json({ success: true, redirect: 'Director.html' });
+            }
+
+            const [teacherRows] = await db.query("SELECT profesor FROM teacher_data WHERE nomina = ?", [userId]);
+
+            if (teacherRows.length === 0) {
                 return res.status(404).json({ error: "Nómina no encontrada" });
             }
 
@@ -39,7 +50,7 @@ authRouter.post('/login', async (req, res) => {
                 return res.status(401).json({ error: "Contraseña incorrecta" });
             }
 
-            req.session.user = { id: userId, role: 'teacher', name: rows[0].profesor };
+            req.session.user = { id: userId, role: 'teacher', name: teacherRows[0].profesor };
             return res.json({ success: true, redirect: 'teacher.html' });
         }
         
