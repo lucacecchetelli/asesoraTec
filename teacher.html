@@ -7,9 +7,6 @@
 
     <link rel="stylesheet" href="style.css" />
     <style>
-        /* Native select dropdowns inherit the element's text colour, which on some
-           OS/browser combos (Windows Chrome) renders white text on a white background.
-           Explicitly setting background and colour on <option> fixes this everywhere. */
         select option {
             background-color: #2d3748;
             color: white;
@@ -394,6 +391,8 @@
     
             document.querySelectorAll(".nav-tab").forEach(t => t.classList.remove("active"));
             document.querySelector(".nav-tab:nth-child(2)").classList.add("active");
+
+            renderTeacherAgenda();
         }
 
         function selectPresetColor(element, color) {
@@ -749,7 +748,7 @@
                     ? `Gpos ${items.map(i => i.grupo || 'N/A').join(', ')}`
                     : `Gpo ${first.grupo || 'N/A'}`;
 
-                const blockPlace = first.modality === 'En línea' ? '🔗 En línea' : first.place;
+                const blockPlace = first.modality === 'En línea' ? '🔗 En línea' : (first.place || '');
 
                 block.innerHTML = `
                     <div class="block-content">
