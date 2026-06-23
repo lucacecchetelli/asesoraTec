@@ -2,6 +2,27 @@
 const profileBtn = document.getElementById('profileBtn');
 const dropdownMenu = document.getElementById('dropdownMenu');
 
+document.addEventListener('DOMContentLoaded', () => {
+    fetch('/api/auth/me')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('No se pudo obtener la sesión');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data && data.name) {
+                const dirNameSpan = document.getElementById('dirName');
+                if (dirNameSpan) {
+                    dirNameSpan.textContent = data.name;
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error al cargar los datos del director:', error);
+        });
+});
+
 profileBtn.addEventListener('click', (e) => {
   e.stopPropagation();
   const isOpen = dropdownMenu.classList.toggle('open');
