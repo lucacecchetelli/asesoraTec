@@ -1,4 +1,3 @@
-// ===== PROFILE DROPDOWN =====
 const profileBtn = document.getElementById('profileBtn');
 const dropdownMenu = document.getElementById('dropdownMenu');
 
@@ -46,16 +45,12 @@ document.querySelectorAll('.chip').forEach(btn => {
   });
 });
 
-// ===== CHART DEFAULTS =====
 Chart.defaults.color = '#9aa4b2';
 Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 Chart.defaults.font.size = 12;
 
 const gridColor = 'rgba(42,47,61,0.6)';
 
-// ===== API HELPERS =====
-// Fetch JSON from an endpoint; on any failure fall back to the mock data so
-// the dashboard still renders (e.g. when opened statically without the server).
 async function getJSON(url, fallback) {
   try {
     const res = await fetch(url);
@@ -67,9 +62,6 @@ async function getJSON(url, fallback) {
   }
 }
 
-// ===== CONTROL DE ACCESO + SALUDO =====
-// Sólo una sesión con rol 'director' puede ver el panel; cualquier otra se
-// reenvía a la pantalla de login de Maestro-Estudiante.
 getJSON('/api/auth/me', null).then(user => {
   if (!user || user.role !== 'director') {
     window.location.href = '/';
@@ -79,8 +71,6 @@ getJSON('/api/auth/me', null).then(user => {
   if (nameEl) nameEl.textContent = user.id;
 });
 
-// Consistent subject color coding (red=Matemáticas, blue=Física,
-// green=Química, orange=Inglés), with a fallback palette for other subjects.
 const fallbackPalette = ['#a78bfa', '#f472b6', '#22d3ee', '#facc15', '#94a3b8'];
 function subjectColor(nombre, i = 0) {
   const n = (nombre || '').toLowerCase();
@@ -91,11 +81,8 @@ function subjectColor(nombre, i = 0) {
   return fallbackPalette[i % fallbackPalette.length];
 }
 
-// ===== DONUT CHART: alumnos por estatus académico =====
 const donutCtx = document.getElementById('donutChart').getContext('2d');
-const donutFallback = []; // sin datos falsos: si el servidor falla, queda vacío
-// Color por estatus: rojo si el nombre sugiere riesgo, verde si va al corriente,
-// y paleta de respaldo para cualquier otro valor de estatus_academico.
+const donutFallback = []; 
 const statusColor = (estado, i) => {
   const n = (estado || '').toLowerCase();
   if (/riesgo|baja|condicion|irregular|inactiv|reprob/.test(n)) return '#f87171';
@@ -129,7 +116,6 @@ getJSON('/api/asistencia', donutFallback).then(rows => {
   });
 });
 
-// ===== LINE CHART: alumnos por programa =====
 const lineCtx = document.getElementById('lineChart').getContext('2d');
 
 const makeDataset = (label, color, data) => ({
@@ -145,7 +131,6 @@ const makeDataset = (label, color, data) => ({
   fill: true,
 });
 
-// Respaldo vacío: sin datos falsos (si el servidor falla, la gráfica queda vacía).
 const lineFallback = [];
 
 const lineOptions = {
@@ -192,9 +177,8 @@ getJSON('/api/asesorias-por-dia', lineFallback).then(rows => {
   });
 });
 
-// ===== HORIZONTAL BAR CHART =====
 const barCtx = document.getElementById('barChart').getContext('2d');
-const barFallback = []; // sin datos falsos: si el servidor falla, queda vacío
+const barFallback = [];
 
 getJSON('/api/demanda', barFallback).then(rows => {
   new Chart(barCtx, {
@@ -232,11 +216,6 @@ const barOptions = {
     animation: { duration: 900 }
 };
 
-// (La curva sintética de "Alumnos en Riesgo" se quitó: no había datos reales que
-//  la respaldaran. El contador real de alumnos en riesgo se llena más abajo.)
-
-// ===== KPIs DEL DIRECTORIO =====
-// Endpoint de una sola fila: { total_alumnos, total_maestros, total_grupos, pct_en_regla }.
 const metricasFallback = [{ total_alumnos: 0, total_maestros: 0, total_grupos: 0, pct_en_regla: 0 }];
 
 getJSON('/api/metricas', metricasFallback).then(rows => {
@@ -254,10 +233,6 @@ getJSON('/api/metricas', metricasFallback).then(rows => {
   setText('kpiGrupos', Number(m.total_grupos).toLocaleString('es-MX'));
 });
 
-// ===== ALERTAS / ALUMNOS EN RIESGO =====
-// Alimenta el KPI "Alertas activas" y el contador de la tarjeta de riesgo.
-const riesgoFallback = []; // sin datos falsos: si el servidor falla, muestra 0
-
 getJSON('/api/riesgo', riesgoFallback).then(rows => {
   const count = Array.isArray(rows) ? rows.length : 0;
   const kpi = document.getElementById('kpiAlertas');
@@ -266,8 +241,6 @@ getJSON('/api/riesgo', riesgoFallback).then(rows => {
   if (badge) badge.textContent = count;
 });
 
-// ===== TABLA: lista de alumnos =====
-// Rows: { alumno, matricula, programa, estatus }.
 const recientesFallback = [
   { alumno: 'Ana García López',  matricula: 'A01001', programa: 'Bicultural',    estatus: 'Regular' },
   { alumno: 'Luis Torres Mena',  matricula: 'A01002', programa: 'Multicultural', estatus: 'En riesgo' },
@@ -276,12 +249,10 @@ const recientesFallback = [
   { alumno: 'María Díaz Soto',   matricula: 'A01005', programa: 'Bicultural',    estatus: 'Regular' },
 ];
 
-// Escape user-provided strings before injecting into the table markup.
 const escapeHTML = str => String(str ?? '').replace(/[&<>"']/g, c => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
 }[c]));
 
-// ¿El estatus académico sugiere riesgo? (mismo criterio que el backend).
 const esRiesgo = e => /riesgo|baja|condicion|irregular|inactiv|reprob/.test((e || '').toLowerCase());
 
 getJSON('/api/asesorias-recientes', recientesFallback).then(rows => {

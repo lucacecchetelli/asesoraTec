@@ -9,15 +9,13 @@
 </head>
 <body>
 
-<!-- barra de navegacion  -->
 <nav class="top-navbar">
   <div class="navbar-left">
     <button class="hamburger" aria-label="Menú">
       <span></span><span></span><span></span>
     </button>
     <div class="logo">
-      <!-- vectorial draw   -->
-      <img src="asesoraTec.png" alt="LogoAsesoraTec">
+      <img src="IconoMTY.png" alt="LogoAsesoraTec">
       <span>AsesoraTec</span>
     </div>
   </div>
@@ -38,7 +36,6 @@
   </div>
 </nav>
 
-<!-- HERO SECTION -->
 <div class="hero-section">
   <div class="greeting-container">
     <h1 class="greeting-title">Hola, <span id="dirName">Director</span> <span class="role-badge">Director</span></h1>
@@ -56,10 +53,8 @@
   </div>
 </div>
 
-<!-- DASHBOARD GRID -->
 <div class="dashboard-grid">
 
-  <!-- LEFT METRICS PANEL -->
   <aside class="left-metrics-panel">
     <div class="metric-card">
       <div class="metric-icon" style="background:rgba(99,102,241,.15);color:#818cf8">
@@ -89,7 +84,6 @@
       </div>
     </div>
 
-    <!-- DONUT CHART CARD -->
     <div class="metric-card attendance-card">
       <div class="card-title">Alumnos por Estatus</div>
       <div class="donut-wrapper">
@@ -107,7 +101,6 @@
     </div>
   </aside>
 
-  <!-- MAIN ANALYTICS PANEL -->
   <main class="main-analytics-panel">
     <div class="chart-header">
       <div>
@@ -123,7 +116,7 @@
     <div class="line-chart-container">
       <canvas id="lineChart"></canvas>
     </div>
-    <!-- TABLA: LISTA DE ALUMNOS -->
+
     <div class="recent-sessions">
       <div class="section-header">
         <span class="section-title">Alumnos</span>
@@ -140,10 +133,8 @@
     </div>
   </main>
 
-  <!-- RIGHT INSIGHTS PANEL -->
   <aside class="right-insights-panel">
 
-    <!-- SUBJECTS DEMAND CARD -->
     <div class="subjects-demand-card insight-card">
       <div class="card-title">Demanda por Materia</div>
       <div class="bar-chart-container">
@@ -151,7 +142,6 @@
       </div>
     </div>
 
-    <!-- RISK ALERT CARD (sin curva sintética; el contador es real, de la BD) -->
     <div class="risk-alert-card insight-card">
       <div class="card-title">Alumnos en Riesgo Académico</div>
       <div class="alert-badge">
@@ -163,7 +153,24 @@
 
   </aside>
 
-</div><!-- end dashboard-grid -->
+</div>
+
+<div id="historyModal" style="display:none; position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.6); backdrop-filter:blur(4px); align-items:center; justify-content:center;">
+  <div style="background:#1a1d24; border:1px solid #2a2f3d; border-radius:16px; width:min(680px,95vw); max-height:80vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 24px 64px rgba(0,0,0,.5);">
+
+    <div style="padding:20px 24px 16px; border-bottom:1px solid #2a2f3d; display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-shrink:0;">
+      <div>
+        <h2 id="historyModalName" style="margin:0 0 4px; font-size:1.1rem; color:#e2e8f0;">—</h2>
+        <p id="historyModalSub" style="margin:0; font-size:.8rem; color:#64748b;">Historial de asesorías</p>
+      </div>
+      <button onclick="closeHistoryModal()" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:1.4rem; line-height:1; padding:2px 6px; border-radius:6px;">&times;</button>
+    </div>
+
+    <div id="historyModalBody" style="overflow-y:auto; padding:16px 24px 24px; flex:1;">
+      <p style="color:#64748b; text-align:center; padding:24px 0;">Cargando historial…</p>
+    </div>
+  </div>
+</div>
 
 <script src="Director.js"></script>
 </body>

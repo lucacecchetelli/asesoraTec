@@ -217,6 +217,15 @@
         let selectedAdvisoryColor = "#3498db";
         let teacherAdvisories = [];
         let allSystemStudents = [];
+
+        function syncAdvisoriesToServer() {
+            const key = `teacherAdvisories_${currentUserId}`;
+            fetch(`/api/kv/${key}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ value: JSON.stringify(teacherAdvisories) })
+            }).catch(e => console.warn('[sync] Server sync failed (offline?):', e.message));
+        }
     
         const daysMap = {
             "Lunes": 0,
@@ -524,6 +533,7 @@
             });
 
             localStorage.setItem(`teacherAdvisories_${currentUserId}`, JSON.stringify(teacherAdvisories));
+            syncAdvisoriesToServer();
             closeModal();
             renderTeacherTable();
             renderTeacherAgenda();
@@ -593,6 +603,7 @@
             });
             
             localStorage.setItem(`teacherAdvisories_${currentUserId}`, JSON.stringify(teacherAdvisories));
+            syncAdvisoriesToServer();
             renderTeacherTable(); 
             document.getElementById("addStudentModal").classList.add("hidden");
         });
@@ -676,7 +687,8 @@
                     startMinutes: advisory.startMinutes,
                     place: advisory.place,
                     profesor: advisory.profesor,
-                    modality: advisory.modality
+                    modality: advisory.modality,
+                    note: (advisory.studentNotes && advisory.studentNotes[matricula]) || ''
                 });
             });
 
@@ -691,6 +703,7 @@
             }
 
             localStorage.setItem(`teacherAdvisories_${currentUserId}`, JSON.stringify(teacherAdvisories));
+            syncAdvisoriesToServer();
             
             alert("Asistencia guardada correctamente.");
             closeAttendanceModal();
@@ -871,6 +884,7 @@
             teacherAdvisories = teacherAdvisories.filter(a => a.id !== id);
             
             localStorage.setItem(`teacherAdvisories_${currentUserId}`, JSON.stringify(teacherAdvisories));
+            syncAdvisoriesToServer();
 
             sortAdvisories();
             renderTeacherTable();
