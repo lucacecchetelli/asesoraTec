@@ -233,6 +233,8 @@ getJSON('/api/metricas', metricasFallback).then(rows => {
   setText('kpiGrupos', Number(m.total_grupos).toLocaleString('es-MX'));
 });
 
+const riesgoFallback = [];
+
 getJSON('/api/riesgo', riesgoFallback).then(rows => {
   const count = Array.isArray(rows) ? rows.length : 0;
   const kpi = document.getElementById('kpiAlertas');
@@ -241,13 +243,7 @@ getJSON('/api/riesgo', riesgoFallback).then(rows => {
   if (badge) badge.textContent = count;
 });
 
-const recientesFallback = [
-  { alumno: 'Ana García López',  matricula: 'A01001', programa: 'Bicultural',    estatus: 'Regular' },
-  { alumno: 'Luis Torres Mena',  matricula: 'A01002', programa: 'Multicultural', estatus: 'En riesgo' },
-  { alumno: 'Sofía Ruiz Vela',   matricula: 'A01003', programa: 'Internacional', estatus: 'Regular' },
-  { alumno: 'Carlos Vega Ríos',  matricula: 'A01004', programa: 'Bilingüe',      estatus: 'Condicionado' },
-  { alumno: 'María Díaz Soto',   matricula: 'A01005', programa: 'Bicultural',    estatus: 'Regular' },
-];
+const recientesFallback = [];
 
 const escapeHTML = str => String(str ?? '').replace(/[&<>"']/g, c => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -257,10 +253,17 @@ const esRiesgo = e => /riesgo|baja|condicion|irregular|inactiv|reprob/.test((e |
 
 getJSON('/api/asesorias-recientes', recientesFallback).then(rows => {
   const tbody = document.getElementById('sessionsBody');
-  if (!tbody || !Array.isArray(rows) || rows.length === 0) return;
-  tbody.innerHTML = rows.slice(0, 8).map(r => {
+  if (!tbody || !Array.isArray(rows) || rows.length === 0) {
+      if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#64748b; padding:20px;">No hay alumnos asignados</td></tr>';
+      return;
+  }
+  
+  tbody.innerHTML = rows.map(r => {
     const cls = esRiesgo(r.estatus) ? 'red' : 'green';
-    return `<tr>` +
+    return `<tr style="cursor:pointer; transition: background 0.2s;"
+                onmouseover="this.style.background='rgba(255,255,255,0.05)'"
+                onmouseout="this.style.background='transparent'"
+                onclick="openStudentHistory('${escapeHTML(r.matricula)}', '${escapeHTML(r.alumno)}')">` +
       `<td>${escapeHTML(r.alumno)}</td>` +
       `<td>${escapeHTML(r.matricula)}</td>` +
       `<td>${escapeHTML(r.programa)}</td>` +
@@ -268,3 +271,64 @@ getJSON('/api/asesorias-recientes', recientesFallback).then(rows => {
       `</tr>`;
   }).join('');
 });
+
+window.openSudentHistory = function(matricula, nombre) {
+  const modal = document.getElementById('historyModal');
+  const nameEl = document.getElementById('historyModalName');
+  const bodyEl = document.getElementById('historyModalBody');
+
+  nameEl.textContent = `${nombre} (${matricula})`;
+  bodyEl.innerHTML = '<p style="color:#64748b; text-align:center; padding:24px0;">Cargando historial...</p>';
+  modal.style.display = 'flex';
+
+  fetch(`/api/student-history/${matricula}`)
+    .then(res => res.json())
+    .then(history => {
+      if(!history || history.length === 0) {
+        bodyEl.innerHTML = '<p style="color:#64748b; text-align:center; padding:24px 0;">No hay historial de asesorías.</p>';
+        return;
+      }
+
+      const formatTime = (h, m) => `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+
+      bodyEl.innerHTML = history.map(h => {
+        const date = new Date(h.historyDate);
+        const dateStr = `${h.day} ${date.getDate()}/${date.getMonth()+1}`;
+        const timeStr = `${formatTime(h.startHour, h.startMinutes)}`;
+
+        let html = `
+          <div style="background:rgba(255,255,255,0.05); border:1px solid #2a2f3d; border-radius:8px; padding:16px; margin-bottom:12px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+              <strong style="color:#e2e8f0; font-size:1rem;">${escapeHTML(h.className)}</strong>
+              <span style="color:#2ecc71; font-size:0.85rem; font-weight:bold;">✓ Asistió</span>
+            </div>
+            <div style="color:#9aa4b2; font-size:0.85rem; display:flex; gap:16px; margin-bottom:8px; flex-wrap:wrap;">
+              <span> ${dateStr} </span>
+              <span> ${timeStr} </span>
+              <span> Prof: ${escapeHTML(h.profesor)} </span>
+            </div>
+        `;
+
+        if (h.note && h.note.trim() !== '') {
+          html += `
+            <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border-left:3px solid #3498db; margin-top:10px;">
+              <span style="color:#818cf8; font-size:0.8rem; font-weight:bold; display:block; margin-bottom:4px;">Nota del Profesor:</span>
+              <span style="color:#e2e8f0; font-size:0.9rem; font-style:italic;">"${escapeHTML(h.note)}"</span>
+            </div>
+          `;
+        }
+
+        html += `</div>`;
+        return html;
+      }).join('');
+    })
+
+    .catch(err => {
+      console.error('Error al cargar el historial del alumno:', err);
+      bodyEl.innerHTML = '<p style="color:#f87171; text-align:center; padding:24px 0;">Error de conexión con el historial.</p>';
+    });
+};
+
+window.closeHistoryModal = function() {
+  document.getElementById('historyModal').style.display = 'none';
+};
