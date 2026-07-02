@@ -362,11 +362,11 @@
                 `;
 
                 if (type === 'registered') {
-                    let buttons = `<button class="join-btn" style="background-color: #e74c3c;" onclick="cancelRegistration('${a.id}', '${a.teacherId}')">Cancelar</button>`;
                     if (a.modality === 'En línea' && a.meetingLink) {
-                        buttons = `<a href="${a.meetingLink}" target="_blank" class="join-btn" style="background-color: #2ecc71; text-decoration: none; display: inline-block; margin-right: 5px;">Link</a>` + buttons;
+                        rowData += `<td style="padding: 12px 10px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.05);"><a href="${a.meetingLink}" target="_blank" class="join-btn" style="background-color: #2ecc71; text-decoration: none; display: inline-block;">Unirse</a></td>`;
+                    } else {
+                        rowData += `<td style="padding: 12px 10px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.05);"><span style="color:#2ecc71; font-size:0.85rem; font-weight:600;">✓ Registrado</span></td>`;
                     }
-                    rowData += `<td style="padding: 12px 10px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.05);">${buttons}</td>`;
                 }
                 else if (type === 'history') {
                     actionHtml = `<span style="color: #2ecc71; font-weight: bold; font-size: 0.9rem;">✓ Asistió</span>`;

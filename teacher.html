@@ -18,6 +18,7 @@
     <div class="page-container">
         <header class="header">
             <a href="login.html" class="header-btn"><h2>AsesoraTec</h2></a>
+            <a id="directorViewBtn" href="/Director.html" style="display:none; background:rgba(129,140,248,.15); color:#818cf8; border:1px solid rgba(129,140,248,.3); padding:6px 14px; border-radius:8px; font-size:.8rem; font-weight:600; text-decoration:none;">Vista Director</a>
         </header>
 
         <main class="main">
@@ -288,6 +289,12 @@
 
                 currentUserId = user.id || user.nomina;
                 currentTeacherName = user.name;
+
+                if (user.role === 'director') {
+                    const btn = document.getElementById('directorViewBtn');
+                    if (btn) btn.style.display = 'inline-block';
+                }
+
                 await loadAllStudents();
 
                 if (currentUserId) {

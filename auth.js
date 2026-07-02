@@ -17,46 +17,35 @@ authRouter.post('/login', async (req, res) => {
             if (password !== UNIVERSAL_PASSWORD) {
                 return res.status(401).json({ error: "Contraseña incorrecta" });
             }
-
             const [rows] = await db.query("SELECT matricula FROM student_data WHERE matricula = ?", [userId]);
-            
             if (rows.length === 0) {
                 return res.status(404).json({ error: "Matrícula no encontrada" });
             }
-
             req.session.user = { id: userId, role: 'student' };
             return res.json({ success: true, redirect: 'student.html' });
         }
-        
-        else if (userId.startsWith('L')) {
-            const [directorRows] = await db.query("SELECT nombre FROM director_data WHERE nomina = ?", [userId]);
 
-            if (directorRows.length > 0) {
-                if (password !== UNIVERSAL_PASSWORD) {
-                    return res.status(401).json({ error: "Contraseña incorrecta" });
-                }
-                
-                req.session.user = { id: userId, role: 'director', name: directorRows[0].nombre };
-                return res.json({ success: true, redirect: 'Director.html' });
-            }
-
-            const [teacherRows] = await db.query("SELECT profesor FROM teacher_data WHERE nomina = ?", [userId]);
-
-            if (teacherRows.length === 0) {
+        if (userId.startsWith('L')) {
+            const [rows] = await db.query("SELECT profesor FROM teacher_data WHERE nomina = ?", [userId]);
+            if (rows.length === 0) {
                 return res.status(404).json({ error: "Nómina no encontrada" });
             }
-
             if (password !== UNIVERSAL_PASSWORD) {
                 return res.status(401).json({ error: "Contraseña incorrecta" });
             }
 
-            req.session.user = { id: userId, role: 'teacher', name: teacherRows[0].profesor };
-            return res.json({ success: true, redirect: 'teacher.html' });
+            const profesorName = rows[0].profesor;
+            const [dirRows] = await db.query(
+                "SELECT COUNT(*) AS cnt FROM student_data WHERE dir_programa = ? LIMIT 1",
+                [profesorName]
+            );
+            const isDirector = Number(dirRows[0].cnt) > 0;
+
+            req.session.user = { id: userId, role: isDirector ? 'director' : 'teacher', name: profesorName };
+            return res.json({ success: true, redirect: isDirector ? 'Director.html' : 'teacher.html' });
         }
-        
-        else {
-            return res.status(400).json({ error: "Usuario no válido" });
-        }
+
+        return res.status(400).json({ error: "Usuario no válido" });
 
     } catch (error) {
         console.error("Login logic error:", error);
