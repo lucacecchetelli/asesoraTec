@@ -1,3 +1,4 @@
+import bcrypt from "bcryptjs";
 import "dotenv/config";
 import express from "express";
 import session from "express-session";
@@ -162,6 +163,38 @@ app.get('/api/students/:clave/:grupo', async (req, res) => {
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'login.html'));
+});
+
+function isValidPassword(pwd) {
+    if (!/^\d{5}$/.test(pwd)) return 'Debe tener exactamente 5 dígitos numéricos';
+    const d = pwd.split('').map(Number);
+    if (new Set(d).size !== 5) return 'No se pueden repetir dígitos';
+    const isAsc = d.every((n, i) => i === 0 || n === d[i - 1] + 1);
+    const isDesc = d.every((n, i) => i === 0 || n === d[i - 1] - 1);
+    if (isAsc || isDesc) return 'No puede ser una secuencia consecutiva (ej. 12345 o 54321)';
+    return null;
+}
+
+app.post('/api/change-password', async (req, res) => {
+    if (!req.session?.user) return res.status(401).json({ error: 'No autorizado' });
+    const { password } = req.body;
+    const validationError = isValidPassword(password);
+    if (validationError) return res.status(400).json({ error: validationError });
+
+    try {
+        const hash = await bcrypt.hash(password, 10);
+        const { id, role } = req.session.user;
+        if (role === 'student') {
+            await db.query("UPDATE student_data SET password_hash = ? WHERE matricula = ?", [hash, id]);
+        } else {
+            await db.query("UPDATE teacher_data SET password_hash = ? WHERE nomina = ?", [hash, id]);
+        }
+        const next = role === 'student' ? 'student.html' : (role === 'director' ? 'Director.html' : 'teacher.html');
+        res.json({ success: true, redirect: next });
+    } catch (err) {
+        console.error("change-password error:", err);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
 });
 
 app.use(express.static(__dirname));

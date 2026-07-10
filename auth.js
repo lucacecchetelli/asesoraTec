@@ -1,3 +1,4 @@
+import bcrypt from "bcryptjs";
 import express from "express";
 import { db } from "./server.js";
 
@@ -14,35 +15,58 @@ authRouter.post('/login', async (req, res) => {
 
     try {
         if (userId.startsWith('A')) {
-            if (password !== UNIVERSAL_PASSWORD) {
-                return res.status(401).json({ error: "Contraseña incorrecta" });
+            const [rows] = await db.query(
+                "SELECT matricula, password_hash FROM student_data WHERE matricula = ?",
+                [userId]
+            );
+            if (rows.length === 0) return res.status(404).json({ error: "Matrícula no encontrada" });
+
+            const hash = rows[0].password_hash || null;
+            if (hash) {
+                const match = await bcrypt.compare(password, hash);
+                if (!match) return res.status(401).json({ error: "Contraseña incorrecta" });
+            } else {
+                if (password !== UNIVERSAL_PASSWORD) return res.status(401).json({ error: "Contraseña incorrecta" });
             }
-            const [rows] = await db.query("SELECT matricula FROM student_data WHERE matricula = ?", [userId]);
-            if (rows.length === 0) {
-                return res.status(404).json({ error: "Matrícula no encontrada" });
-            }
+
             req.session.user = { id: userId, role: 'student' };
-            return res.json({ success: true, redirect: 'student.html' });
+            const redirect = hash ? 'student.html' : 'set-password.html';
+            return res.json({ success: true, redirect });
         }
 
         if (userId.startsWith('L')) {
-            const [rows] = await db.query("SELECT profesor FROM teacher_data WHERE nomina = ?", [userId]);
-            if (rows.length === 0) {
-                return res.status(404).json({ error: "Nómina no encontrada" });
-            }
-            if (password !== UNIVERSAL_PASSWORD) {
-                return res.status(401).json({ error: "Contraseña incorrecta" });
+            const [rows] = await db.query(
+                "SELECT profesor, password_hash FROM teacher_data WHERE nomina = ? LIMIT 1",
+                [userId]
+            );
+            if (rows.length === 0) return res.status(404).json({ error: "Nómina no encontrada" });
+
+            const { profesor, password_hash } = rows[0];
+            const hash = password_hash || null;
+
+            if (hash) {
+                const match = await bcrypt.compare(password, hash);
+                if (!match) return res.status(401).json({ error: "Contraseña incorrecta" });
+            } else {
+                if (password !== UNIVERSAL_PASSWORD) return res.status(401).json({ error: "Contraseña incorrecta" });
             }
 
-            const profesorName = rows[0].profesor;
             const [dirRows] = await db.query(
                 "SELECT COUNT(*) AS cnt FROM student_data WHERE dir_programa = ? LIMIT 1",
-                [profesorName]
+                [profesor]
             );
             const isDirector = Number(dirRows[0].cnt) > 0;
+            const role = isDirector ? 'director' : 'teacher';
 
-            req.session.user = { id: userId, role: isDirector ? 'director' : 'teacher', name: profesorName };
-            return res.json({ success: true, redirect: isDirector ? 'Director.html' : 'teacher.html' });
+            req.session.user = { id: userId, role, name: profesor };
+
+            let redirect;
+            if (!hash) {
+                redirect = 'set-password.html';
+            } else {
+                redirect = role === 'director' ? 'Director.html' : 'teacher.html';
+            }
+            return res.json({ success: true, redirect });
         }
 
         return res.status(400).json({ error: "Usuario no válido" });

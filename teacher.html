@@ -18,7 +18,11 @@
     <div class="page-container">
         <header class="header">
             <a href="login.html" class="header-btn"><h2>AsesoraTec</h2></a>
-            <a id="directorViewBtn" href="/Director.html" style="display:none; background:rgba(129,140,248,.15); color:#818cf8; border:1px solid rgba(129,140,248,.3); padding:6px 14px; border-radius:8px; font-size:.8rem; font-weight:600; text-decoration:none;">Vista Director</a>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <a id="directorViewBtn" href="/Director.html" style="display:none; background:rgba(129,140,248,.15); color:#818cf8; border:1px solid rgba(129,140,248,.3); padding:6px 14px; border-radius:8px; font-size:.8rem; font-weight:600; text-decoration:none;">Vista Director</a>
+                <button onclick="document.getElementById('changePwdModal').style.display='flex'" style="background:rgba(255,255,255,.07); color:#94a3b8; border:1px solid rgba(255,255,255,.1); padding:6px 14px; border-radius:8px; font-size:.8rem; cursor:pointer;">Cambiar contraseña</button>
+                <a href="/api/logout" style="background:rgba(248,113,113,.12); color:#f87171; border:1px solid rgba(248,113,113,.2); padding:6px 14px; border-radius:8px; font-size:.8rem; font-weight:600; text-decoration:none;">Cerrar sesión</a>
+            </div>
         </header>
 
         <main class="main">
@@ -935,7 +939,120 @@
             });
         }
 
+        function syncAdvisoriesToServer() {
+            const key = `teacherAdvisories_${currentUserId}`;
+            fetch(`/api/kv/${key}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ value: JSON.stringify(teacherAdvisories) })
+            }).catch(e => console.warn('[sync] Server sync failed:', e.message));
+        }
+
         initializeTeacherPage();
+    </script>
+
+    <div id="changePwdModal" style="display:none; position:fixed; inset:0; z-index:2000; background:rgba(0,0,0,.6); backdrop-filter:blur(4px); align-items:center; justify-content:center;">
+        <div style="background:#1a1d24; border:1px solid #2a2f3d; border-radius:16px; width:min(380px,95vw); padding:28px 28px 24px; box-shadow:0 24px 64px rgba(0,0,0,.5);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+                <h2 style="margin:0; font-size:1.1rem; color:#e2e8f0;">Cambiar contraseña</h2>
+                <button onclick="document.getElementById('changePwdModal').style.display='none'" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.4rem;">&times;</button>
+            </div>
+            <p style="color:#64748b;font-size:.82rem;margin:0 0 16px;">PIN de 5 dígitos únicos y no consecutivos.</p>
+            <div style="display:flex;gap:10px;justify-content:center;margin-bottom:12px;" id="tPinRow">
+                <input type="text" inputmode="numeric" maxlength="1" class="tpd" autocomplete="off" style="width:46px;height:58px;text-align:center;font-size:1.5rem;font-weight:700;background:#1e2330;border:2px solid #2a2f3d;border-radius:10px;color:#e2e8f0;outline:none;">
+                <input type="text" inputmode="numeric" maxlength="1" class="tpd" autocomplete="off" style="width:46px;height:58px;text-align:center;font-size:1.5rem;font-weight:700;background:#1e2330;border:2px solid #2a2f3d;border-radius:10px;color:#e2e8f0;outline:none;">
+                <input type="text" inputmode="numeric" maxlength="1" class="tpd" autocomplete="off" style="width:46px;height:58px;text-align:center;font-size:1.5rem;font-weight:700;background:#1e2330;border:2px solid #2a2f3d;border-radius:10px;color:#e2e8f0;outline:none;">
+                <input type="text" inputmode="numeric" maxlength="1" class="tpd" autocomplete="off" style="width:46px;height:58px;text-align:center;font-size:1.5rem;font-weight:700;background:#1e2330;border:2px solid #2a2f3d;border-radius:10px;color:#e2e8f0;outline:none;">
+                <input type="text" inputmode="numeric" maxlength="1" class="tpd" autocomplete="off" style="width:46px;height:58px;text-align:center;font-size:1.5rem;font-weight:700;background:#1e2330;border:2px solid #2a2f3d;border-radius:10px;color:#e2e8f0;outline:none;">
+            </div>
+            <ul style="list-style:none;padding:0;margin:0 0 16px;font-size:.78rem;">
+                <li id="tRule1" style="color:#64748b;padding:2px 0;">○  5 dígitos numéricos</li>
+                <li id="tRule2" style="color:#64748b;padding:2px 0;">○  Sin dígitos repetidos</li>
+                <li id="tRule3" style="color:#64748b;padding:2px 0;">○  Sin secuencias consecutivas</li>
+            </ul>
+            <button id="tSubmitPwd" disabled style="width:100%;padding:12px;border:none;border-radius:9px;background:#3b82f6;color:#fff;font-size:.9rem;font-weight:600;cursor:pointer;opacity:.4;">Guardar</button>
+            <p id="tPwdMsg" style="text-align:center;font-size:.82rem;margin-top:10px;min-height:18px;"></p>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const boxes = Array.from(document.querySelectorAll('.tpd'));
+            const btn   = document.getElementById('tSubmitPwd');
+            const msg   = document.getElementById('tPwdMsg');
+            const rules = [document.getElementById('tRule1'), document.getElementById('tRule2'), document.getElementById('tRule3')];
+
+            function setRule(el, state) {
+                const txt = el.textContent.slice(2);
+                el.style.color = state === true ? '#4ade80' : state === false ? '#f87171' : '#64748b';
+                el.textContent = (state === true ? '✓  ' : state === false ? '✗  ' : '○  ') + txt;
+            }
+
+            function validate() {
+                const pin = boxes.map(b => b.value).join('');
+                const d   = pin.split('').map(Number);
+                const ok1 = /^\d{5}$/.test(pin);
+                const ok2 = ok1 && new Set(d).size === 5;
+                const isA = ok1 && d.every((n, i) => i === 0 || n === d[i-1] + 1);
+                const isD = ok1 && d.every((n, i) => i === 0 || n === d[i-1] - 1);
+                const ok3 = ok1 && !isA && !isD;
+                setRule(rules[0], pin.length === 0 ? '' : ok1);
+                setRule(rules[1], pin.length < 2  ? '' : ok2);
+                setRule(rules[2], pin.length < 5  ? '' : ok3);
+                const valid = ok1 && ok2 && ok3;
+                btn.disabled    = !valid;
+                btn.style.opacity = valid ? '1' : '.4';
+                return valid ? pin : null;
+            }
+
+            boxes.forEach((box, i) => {
+                box.addEventListener('keydown', e => {
+                    if (e.key === 'Backspace') {
+                        if (box.value) { box.value = ''; validate(); }
+                        else if (i > 0) { boxes[i-1].focus(); boxes[i-1].value = ''; validate(); }
+                        e.preventDefault();
+                    }
+                });
+                box.addEventListener('input', () => {
+                    box.value = box.value.replace(/\D/g, '').slice(-1);
+                    if (box.value && i < 4) boxes[i+1].focus();
+                    validate();
+                });
+            });
+
+            document.getElementById('changePwdModal').addEventListener('click', e => {
+                if (e.target === e.currentTarget) e.currentTarget.style.display = 'none';
+            });
+
+            btn.addEventListener('click', async () => {
+                const pin = validate();
+                if (!pin) return;
+                btn.disabled = true; btn.style.opacity = '.4';
+                msg.textContent = '';
+                try {
+                    const res  = await fetch('/api/change-password', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ password: pin })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        msg.style.color = '#4ade80';
+                        msg.textContent = '¡Contraseña actualizada!';
+                        boxes.forEach(b => b.value = '');
+                        validate();
+                        setTimeout(() => { document.getElementById('changePwdModal').style.display = 'none'; msg.textContent = ''; }, 1400);
+                    } else {
+                        msg.style.color = '#f87171';
+                        msg.textContent = data.error || 'Error';
+                        btn.disabled = false; btn.style.opacity = '1';
+                    }
+                } catch {
+                    msg.style.color = '#f87171';
+                    msg.textContent = 'Error de conexión';
+                    btn.disabled = false; btn.style.opacity = '1';
+                }
+            });
+        })();
     </script>
 </body>
 </html>

@@ -12,11 +12,15 @@
         <header class="header" style="display: flex; justify-content: space-between; align-items: center;">
             <a href="login.html" class="header-btn"><h2>AsesoraTec</h2></a>
             
-            <div style="text-align: right; color: white;">
-                <strong id="headerMatricula" style="font-size: 1.1rem;">Cargando...</strong><br>
-                <span style="font-size: 0.85rem; color: #a0aec0;">
-                    Estatus: <span id="headerEstatus" style="color: #3498db;">Cargando...</span>
-                </span>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <div style="text-align: right; color: white; margin-right:6px;">
+                    <strong id="headerMatricula" style="font-size: 1.1rem;">Cargando...</strong><br>
+                    <span style="font-size: 0.85rem; color: #a0aec0;">
+                        Estatus: <span id="headerEstatus" style="color: #3498db;">Cargando...</span>
+                    </span>
+                </div>
+                <button onclick="document.getElementById('sChangePwdModal').style.display='flex'" style="background:rgba(255,255,255,.07);color:#94a3b8;border:1px solid rgba(255,255,255,.1);padding:6px 14px;border-radius:8px;font-size:.8rem;cursor:pointer;">Cambiar contraseña</button>
+                <a href="/api/logout" style="background:rgba(248,113,113,.12);color:#f87171;border:1px solid rgba(248,113,113,.2);padding:6px 14px;border-radius:8px;font-size:.8rem;font-weight:600;text-decoration:none;">Cerrar sesión</a>
             </div>
         </header>
     
@@ -363,9 +367,9 @@
 
                 if (type === 'registered') {
                     if (a.modality === 'En línea' && a.meetingLink) {
-                        rowData += `<td style="padding: 12px 10px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.05);"><a href="${a.meetingLink}" target="_blank" class="join-btn" style="background-color: #2ecc71; text-decoration: none; display: inline-block;">Unirse</a></td>`;
+                        rowData += `<td style="padding:12px 10px;text-align:right;border-bottom:1px solid rgba(255,255,255,0.05);"><a href="${a.meetingLink}" target="_blank" class="join-btn" style="background-color:#2ecc71;text-decoration:none;display:inline-block;">Unirse</a></td>`;
                     } else {
-                        rowData += `<td style="padding: 12px 10px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.05);"><span style="color:#2ecc71; font-size:0.85rem; font-weight:600;">✓ Registrado</span></td>`;
+                        rowData += `<td style="padding:12px 10px;text-align:right;border-bottom:1px solid rgba(255,255,255,0.05);"><span style="color:#2ecc71;font-size:.85rem;font-weight:600;">✓ Registrado</span></td>`;
                     }
                 }
                 else if (type === 'history') {
@@ -399,27 +403,114 @@
                 showProfile();
             }
 
-            function cancelRegistration(advisoryId, teacherId) {
-                if (!confirm("¿Seguro que deseas cancelar tu inscripción?")) return;
-
-                const storageKey = `teacherAdvisories_${teacherId}`;
-                let teacherData = JSON.parse(localStorage.getItem(storageKey));
-                if (!teacherData) return;
-
-                const index = teacherData.findIndex(a => a.id.toString() === advisoryId.toString());
-                if (index === -1) return;
-
-                teacherData[index].enrolledStudents = teacherData[index].enrolledStudents.filter(m => m !== currentStudentMatricula);
-                teacherData[index].enrolled--;
-
-                localStorage.setItem(storageKey, JSON.stringify(teacherData));
-                
-                loadAllAdvisories();
-                renderAll();
-            }
-
             initializeStudentPage();
         </script>
     </div>
+
+    <div id="sChangePwdModal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+        <div style="background:#1a1d24;border:1px solid #2a2f3d;border-radius:16px;width:min(380px,95vw);padding:28px 28px 24px;box-shadow:0 24px 64px rgba(0,0,0,.5);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+                <h2 style="margin:0;font-size:1.1rem;color:#e2e8f0;">Cambiar contraseña</h2>
+                <button onclick="document.getElementById('sChangePwdModal').style.display='none'" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.4rem;">&times;</button>
+            </div>
+            <p style="color:#64748b;font-size:.82rem;margin:0 0 16px;">PIN de 5 dígitos únicos y no consecutivos.</p>
+            <div style="display:flex;gap:10px;justify-content:center;margin-bottom:12px;">
+                <input type="text" inputmode="numeric" maxlength="1" class="spd" autocomplete="off" style="width:46px;height:58px;text-align:center;font-size:1.5rem;font-weight:700;background:#1e2330;border:2px solid #2a2f3d;border-radius:10px;color:#e2e8f0;outline:none;">
+                <input type="text" inputmode="numeric" maxlength="1" class="spd" autocomplete="off" style="width:46px;height:58px;text-align:center;font-size:1.5rem;font-weight:700;background:#1e2330;border:2px solid #2a2f3d;border-radius:10px;color:#e2e8f0;outline:none;">
+                <input type="text" inputmode="numeric" maxlength="1" class="spd" autocomplete="off" style="width:46px;height:58px;text-align:center;font-size:1.5rem;font-weight:700;background:#1e2330;border:2px solid #2a2f3d;border-radius:10px;color:#e2e8f0;outline:none;">
+                <input type="text" inputmode="numeric" maxlength="1" class="spd" autocomplete="off" style="width:46px;height:58px;text-align:center;font-size:1.5rem;font-weight:700;background:#1e2330;border:2px solid #2a2f3d;border-radius:10px;color:#e2e8f0;outline:none;">
+                <input type="text" inputmode="numeric" maxlength="1" class="spd" autocomplete="off" style="width:46px;height:58px;text-align:center;font-size:1.5rem;font-weight:700;background:#1e2330;border:2px solid #2a2f3d;border-radius:10px;color:#e2e8f0;outline:none;">
+            </div>
+            <ul style="list-style:none;padding:0;margin:0 0 16px;font-size:.78rem;">
+                <li id="sRule1" style="color:#64748b;padding:2px 0;">○  5 dígitos numéricos</li>
+                <li id="sRule2" style="color:#64748b;padding:2px 0;">○  Sin dígitos repetidos</li>
+                <li id="sRule3" style="color:#64748b;padding:2px 0;">○  Sin secuencias consecutivas</li>
+            </ul>
+            <button id="sSubmitPwd" disabled style="width:100%;padding:12px;border:none;border-radius:9px;background:#3b82f6;color:#fff;font-size:.9rem;font-weight:600;cursor:pointer;opacity:.4;">Guardar</button>
+            <p id="sPwdMsg" style="text-align:center;font-size:.82rem;margin-top:10px;min-height:18px;"></p>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const boxes = Array.from(document.querySelectorAll('.spd'));
+            const btn   = document.getElementById('sSubmitPwd');
+            const msg   = document.getElementById('sPwdMsg');
+            const r1    = document.getElementById('sRule1');
+            const r2    = document.getElementById('sRule2');
+            const r3    = document.getElementById('sRule3');
+
+            function setRule(el, state) {
+                const txt = el.textContent.slice(3);
+                el.style.color = state === true ? '#4ade80' : state === false ? '#f87171' : '#64748b';
+                el.textContent = (state === true ? '✓  ' : state === false ? '✗  ' : '○  ') + txt;
+            }
+
+            function validate() {
+                const pin = boxes.map(b => b.value).join('');
+                const d   = pin.split('').map(Number);
+                const ok1 = /^\d{5}$/.test(pin);
+                const ok2 = ok1 && new Set(d).size === 5;
+                const isA = ok1 && d.every((n, i) => i === 0 || n === d[i-1] + 1);
+                const isD = ok1 && d.every((n, i) => i === 0 || n === d[i-1] - 1);
+                const ok3 = ok1 && !isA && !isD;
+                setRule(r1, pin.length === 0 ? '' : ok1);
+                setRule(r2, pin.length < 2  ? '' : ok2);
+                setRule(r3, pin.length < 5  ? '' : ok3);
+                const valid = ok1 && ok2 && ok3;
+                btn.disabled = !valid;
+                btn.style.opacity = valid ? '1' : '.4';
+                return valid ? pin : null;
+            }
+
+            boxes.forEach((box, i) => {
+                box.addEventListener('keydown', e => {
+                    if (e.key === 'Backspace') {
+                        if (box.value) { box.value = ''; validate(); }
+                        else if (i > 0) { boxes[i-1].focus(); boxes[i-1].value = ''; validate(); }
+                        e.preventDefault();
+                    }
+                });
+                box.addEventListener('input', () => {
+                    box.value = box.value.replace(/\D/g, '').slice(-1);
+                    if (box.value && i < 4) boxes[i+1].focus();
+                    validate();
+                });
+            });
+
+            document.getElementById('sChangePwdModal').addEventListener('click', e => {
+                if (e.target === e.currentTarget) e.currentTarget.style.display = 'none';
+            });
+
+            btn.addEventListener('click', async () => {
+                const pin = validate();
+                if (!pin) return;
+                btn.disabled = true; btn.style.opacity = '.4';
+                msg.textContent = '';
+                try {
+                    const res  = await fetch('/api/change-password', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ password: pin })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        msg.style.color = '#4ade80';
+                        msg.textContent = '¡Contraseña actualizada!';
+                        boxes.forEach(b => b.value = '');
+                        validate();
+                        setTimeout(() => { document.getElementById('sChangePwdModal').style.display = 'none'; msg.textContent = ''; }, 1400);
+                    } else {
+                        msg.style.color = '#f87171';
+                        msg.textContent = data.error || 'Error';
+                        btn.disabled = false; btn.style.opacity = '1';
+                    }
+                } catch {
+                    msg.style.color = '#f87171';
+                    msg.textContent = 'Error de conexión';
+                    btn.disabled = false; btn.style.opacity = '1';
+                }
+            });
+        })();
+    </script>
 </body>
 </html>
