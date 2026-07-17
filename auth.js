@@ -3,14 +3,13 @@ import express from "express";
 import { db } from "./server.js";
 
 export const authRouter = express.Router();
-const UNIVERSAL_PASSWORD = "prepaTec2026";
 
 authRouter.post('/login', async (req, res) => {
     if (!req.body.username || !req.body.password) {
         return res.status(400).json({ error: "Faltan datos" });
     }
 
-    const userId = req.body.username.toUpperCase();
+    const userId   = req.body.username.toUpperCase();
     const password = req.body.password;
 
     try {
@@ -22,16 +21,13 @@ authRouter.post('/login', async (req, res) => {
             if (rows.length === 0) return res.status(404).json({ error: "Matrícula no encontrada" });
 
             const hash = rows[0].password_hash || null;
-            if (hash) {
-                const match = await bcrypt.compare(password, hash);
-                if (!match) return res.status(401).json({ error: "Contraseña incorrecta" });
-            } else {
-                if (password !== UNIVERSAL_PASSWORD) return res.status(401).json({ error: "Contraseña incorrecta" });
-            }
+            if (!hash) return res.status(401).json({ error: "Aún no tienes contraseña. Ve a Crear cuenta." });
+
+            const match = await bcrypt.compare(password, hash);
+            if (!match) return res.status(401).json({ error: "Contraseña incorrecta" });
 
             req.session.user = { id: userId, role: 'student' };
-            const redirect = hash ? 'student.html' : 'set-password.html';
-            return res.json({ success: true, redirect });
+            return res.json({ success: true, redirect: 'student.html' });
         }
 
         if (userId.startsWith('L')) {
@@ -44,29 +40,19 @@ authRouter.post('/login', async (req, res) => {
             const { profesor, password_hash } = rows[0];
             const hash = password_hash || null;
 
-            if (hash) {
-                const match = await bcrypt.compare(password, hash);
-                if (!match) return res.status(401).json({ error: "Contraseña incorrecta" });
-            } else {
-                if (password !== UNIVERSAL_PASSWORD) return res.status(401).json({ error: "Contraseña incorrecta" });
-            }
+            if (!hash) return res.status(401).json({ error: "Aún no tienes contraseña. Ve a Crear cuenta." });
+
+            const match = await bcrypt.compare(password, hash);
+            if (!match) return res.status(401).json({ error: "Contraseña incorrecta" });
 
             const [dirRows] = await db.query(
                 "SELECT COUNT(*) AS cnt FROM student_data WHERE dir_programa = ? LIMIT 1",
                 [profesor]
             );
-            const isDirector = Number(dirRows[0].cnt) > 0;
-            const role = isDirector ? 'director' : 'teacher';
+            const role = Number(dirRows[0].cnt) > 0 ? 'director' : 'teacher';
 
             req.session.user = { id: userId, role, name: profesor };
-
-            let redirect;
-            if (!hash) {
-                redirect = 'set-password.html';
-            } else {
-                redirect = role === 'director' ? 'Director.html' : 'teacher.html';
-            }
-            return res.json({ success: true, redirect });
+            return res.json({ success: true, redirect: role === 'director' ? 'Director.html' : 'teacher.html' });
         }
 
         return res.status(400).json({ error: "Usuario no válido" });

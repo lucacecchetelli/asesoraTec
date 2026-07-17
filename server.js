@@ -169,11 +169,71 @@ function isValidPassword(pwd) {
     if (!/^\d{5}$/.test(pwd)) return 'Debe tener exactamente 5 dígitos numéricos';
     const d = pwd.split('').map(Number);
     if (new Set(d).size !== 5) return 'No se pueden repetir dígitos';
-    const isAsc = d.every((n, i) => i === 0 || n === d[i - 1] + 1);
+    const isAsc  = d.every((n, i) => i === 0 || n === d[i - 1] + 1);
     const isDesc = d.every((n, i) => i === 0 || n === d[i - 1] - 1);
     if (isAsc || isDesc) return 'No puede ser una secuencia consecutiva (ej. 12345 o 54321)';
     return null;
 }
+
+app.post('/api/setup-account/check', async (req, res) => {
+    const userId = (req.body.userId || '').toString().toUpperCase().trim();
+    if (!userId) return res.status(400).json({ error: 'Ingresa tu nómina o matrícula.' });
+
+    try {
+        let rows;
+        if (userId.startsWith('A')) {
+            [rows] = await db.query("SELECT password_hash FROM student_data WHERE matricula = ?", [userId]);
+        } else if (userId.startsWith('L')) {
+            [rows] = await db.query("SELECT password_hash FROM teacher_data WHERE nomina = ? LIMIT 1", [userId]);
+        } else {
+            return res.status(400).json({ error: 'Usuario no válido. Debe comenzar con A (alumno) o L (maestro).' });
+        }
+
+        if (rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado en el sistema.' });
+        if (rows[0].password_hash)  return res.status(409).json({ error: 'Este usuario ya tiene contraseña. Inicia sesión normalmente.' });
+
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('setup-account/check error:', err);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+app.post('/api/setup-account/create', async (req, res) => {
+    const userId   = (req.body.userId || '').toString().toUpperCase().trim();
+    const password = req.body.password;
+    if (!userId) return res.status(400).json({ error: 'Falta el usuario.' });
+
+    const validationError = isValidPassword(password);
+    if (validationError) return res.status(400).json({ error: validationError });
+
+    try {
+        let rows;
+        if (userId.startsWith('A')) {
+            [rows] = await db.query("SELECT password_hash FROM student_data WHERE matricula = ?", [userId]);
+        } else if (userId.startsWith('L')) {
+            [rows] = await db.query("SELECT password_hash FROM teacher_data WHERE nomina = ? LIMIT 1", [userId]);
+        } else {
+            return res.status(400).json({ error: 'Usuario no válido.' });
+        }
+
+        if (rows.length === 0)    return res.status(404).json({ error: 'Usuario no encontrado.' });
+        if (rows[0].password_hash) return res.status(409).json({ error: 'Este usuario ya tiene contraseña.' });
+
+        const hash = await bcrypt.hash(password, 10);
+
+        if (userId.startsWith('A')) {
+            await db.query("UPDATE student_data SET password_hash = ? WHERE matricula = ?", [hash, userId]);
+        } else {
+            await db.query("UPDATE teacher_data SET password_hash = ? WHERE nomina = ?", [hash, userId]);
+        }
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('setup-account/create error:', err);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
 
 app.post('/api/change-password', async (req, res) => {
     if (!req.session?.user) return res.status(401).json({ error: 'No autorizado' });
