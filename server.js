@@ -66,54 +66,50 @@ app.get('/api/classes/:nomina', async (req, res) => {
     }
 });
 
+
 app.get('/api/student/:matricula', async (req, res) => {
     try {
         const studentId = req.params.matricula;
         
-        const [rows] = await db.query("SELECT * FROM student_data WHERE matricula = ?", [studentId]);
+        const [profileRows] = await db.query("SELECT * FROM student_data WHERE matricula = ?", [studentId]);
         
-        if (rows.length === 0) {
+        if (profileRows.length === 0) {
             return res.status(404).json({ error: "Student not found" });
         }
 
-        const profile = rows[0];
-
-        const codeFields = [
-            { clave: profile.matematicas, grupo: profile.grupo_mat, fallback: 'Matemáticas' },
-            { clave: profile.espanol, grupo: profile.grupo_esp, fallback: 'Español' },
-            { clave: profile.humanidades, grupo: profile.grupo_hum, fallback: 'Humanidades' },
-            { clave: profile.ciencias, grupo: profile.grupo_cie, fallback: 'Ciencias' },
-            { clave: profile.tecnologia, grupo: profile.grupo_tec, fallback: 'Tecnología' },
-            { clave: profile.clave, grupo: profile.grupo_idi, fallback: profile.idioma_contenedor || 'Idioma' }
-        ].filter(c => c.clave);
-
-        let materiaMap = {};
-        if (codeFields.length > 0) {
-            const uniqueClaves = [...new Set(codeFields.map(c => c.clave))];
-            const placeholders = uniqueClaves.map(() => '?').join(',');
-            const [materiaRows] = await db.query(
-                `SELECT DISTINCT clave, materia FROM teacher_data WHERE clave IN (${placeholders})`,
-                uniqueClaves
-            );
-            materiaRows.forEach(r => { materiaMap[r.clave] = r.materia; });
-        }
-
-        const classesArray = codeFields.map(c => ({
-            clave: c.clave,
-            grupo: c.grupo,
-            materia: materiaMap[c.clave] || c.fallback
-        }));
+        const [classRows] = await db.query("SELECT clave, materia, grupo, crn FROM student_classes WHERE matricula = ?", [studentId]);
 
         const studentData = {
-            MATRICULA: profile.matricula,
-            PROGRAMA: profile.programa,
-            "Estatus acad": profile.estatus_academico,
-            classes: classesArray
+            MATRICULA: profileRows[0].matricula,
+            PROGRAMA: profileRows[0].carrera,
+            "Estatus acad": profileRows[0].estatus_academico || "Regular",
+            classes: classRows
         };
         
         res.json(studentData);
     } catch (error) {
         console.error("Student DB error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+app.get('/api/students/:crn/:grupo', async (req, res) => {
+    const targetCrn = req.params.crn.trim().toUpperCase();
+    const targetGrupo = req.params.grupo;
+
+    try {
+        const sql = `
+            SELECT sd.matricula, sd.nombre, sd.carrera, sc.materia, sc.grupo, sc.crn 
+            FROM student_data sd
+            JOIN student_classes sc ON sd.matricula = sc.matricula
+            WHERE sc.crn = ? AND sc.grupo = ?
+        `;
+        
+        const [matchingStudents] = await db.query(sql, [targetCrn, targetGrupo]);
+        res.json(matchingStudents);
+
+    } catch (error) {
+        console.error("Filtering error:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });
