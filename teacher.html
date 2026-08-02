@@ -331,6 +331,36 @@
             }
         }
 
+        async function checkDirectorAccess() {
+            try {
+                const res = await fetch('/api/auth/me');
+                const user = await res.json();
+
+                if (user.isDirector) {
+                    const headerContainer = document.querySelector('header') || document.body;
+
+                    const switchBtn = document.createElement('a');
+                    switchBtn.href = 'Director.html';
+                    switchBtn.textContent = 'Cambiar a Vista de Director';
+                    switchBtn.style.cssText = `
+                        position: fixed; top: 15px; right: 20px; z-index: 1000;
+                        background: #3b82f6; color: white; padding: 8px 14px;
+                        border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.9rem;
+                        box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: background 0.2s;
+                    `;
+                    
+                    switchBtn.onmouseover = () => switchBtn.style.background = '#2563eb';
+                    switchBtn.onmouseout = () => switchBtn.style.background = '#3b82f6';
+
+                    headerContainer.appendChild(switchBtn);
+                }
+            } catch (err) {
+                console.error("No se pudo verificar el rol de director", err);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', checkDirectorAccess);
+        
         async function loadAllStudents() {
             try {
                 const response = await fetch('/api/students');

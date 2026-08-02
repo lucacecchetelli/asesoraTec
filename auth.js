@@ -45,23 +45,20 @@ authRouter.post('/login', async (req, res) => {
             const match = await bcrypt.compare(password, hash);
             if (!match) return res.status(401).json({ error: "Contraseña incorrecta" });
 
-            let role = 'teacher';
-            
-            try {
-                const [dirRows] = await db.query(
-                    "SELECT COUNT(*) AS cnt FROM nombre_de_tu_tabla_directores WHERE nomina = ? LIMIT 1",
-                    [userId] 
-                );
-                
-                if (Number(dirRows[0].cnt) > 0) {
-                    role = 'director';
-                }
-            } catch (err) {
-                console.error("Error verificando rol de director:", err);
-            }
+            const [dirRows] = await db.query(
+                "SELECT COUNT(*) AS cnt FROM director_data WHERE nomina = ? LIMIT 1",
+                [userId]
+            );
+            const isDirector = Number(dirRows[0].cnt) > 0;
 
-            req.session.user = { id: userId, role, name: profesor };
-            return res.json({ success: true, redirect: role === 'director' ? 'Director.html' : 'teacher.html' });
+            req.session.user = {
+                id: userId,
+                role: 'teacher',
+                name: profesor,
+                isDirector: isDirector
+            };
+            
+            return res.json({ success: true, redirect: 'teacher.html' });
         }
 
         return res.status(400).json({ error: "Usuario no válido" });
