@@ -11,6 +11,17 @@ export function registerDirectorRoutes(app, db) {
 
   const RIESGO_SQL = "LOWER(COALESCE(estatus_academico,'')) REGEXP 'riesgo|baja|condicion|irregular|inactiv|reprob'";
 
+  const checkDirectorAuth = (req, res, next) => {
+    if (!req.session || !req.session.user) {
+      return res.status(401).json({ error: "No autorizado o sesión expirada" });
+    }
+    const user = req.session.user;
+    if (user.role !== 'director' && !user.isDirector) {
+      return res.status(403).json({ error: "Acceso denegado" });
+    }
+    next();
+  };
+
   app.get('/api/asistencia', run(`
     SELECT COALESCE(NULLIF(TRIM(estatus_academico), ''), 'Sin estatus') AS estado,
            ROUND(100 * COUNT(*) / (SELECT COUNT(*) FROM student_data), 0) AS porcentaje
@@ -28,29 +39,23 @@ export function registerDirectorRoutes(app, db) {
     return todas;
   }
 
-  app.get('/api/asesorias-recientes', async (req, res) => {
-    if (!req.session || !req.session.user || req.session.user.role !== 'director') {
-      return res.status(401).json({ error: "No autorizado o sesión expirada" });
-    }
-
-    const directorName = req.session.user.name;
-
+  // RUTA CORREGIDA: Ya no usa student_names ni dir_programa obsoletos
+  app.get('/api/asesorias-recientes', checkDirectorAuth, async (req, res) => {
     try {
       const sql = `
         SELECT
-          sn.nombre AS alumno,
-          sd.matricula,
-          sd.programa,
-          sd.estatus_academico AS estatus
-        FROM student_data sd
-        INNER JOIN student_names sn ON sd.matricula = sn.matricula
-        WHERE sd.dir_programa = ?
+          nombre AS alumno,
+          matricula,
+          carrera AS programa,
+          estatus_academico AS estatus
+        FROM student_data
+        LIMIT 50
       `;
       
-      const [rows] = await db.query(sql, [directorName]);
+      const [rows] = await db.query(sql);
       res.json(rows);
     } catch (err) {
-      console.error("[Director] Error al obtener alumnos de tu programa:", err);
+      console.error("[Director] Error al obtener alumnos:", err);
       res.status(500).json({ error: "Error interno del servidor" });
     }
   });
@@ -89,15 +94,14 @@ export function registerDirectorRoutes(app, db) {
          FROM student_data) AS pct_en_regla
   `));
 
-
+  // RUTA CORREGIDA: Sin depender de student_names
   app.get('/api/riesgo', run(`
-    SELECT sd.matricula,
-            COALESCE(sn.nombre, sd.matricula) AS nombre,
-            COALESCE(NULLIF(TRIM(sd.programa), ''), '—') AS programa,
-            COALESCE(NULLIF(TRIM(sd.estatus_academico), ''), '—') AS estatus
-    FROM student_data sd
-    LEFT JOIN student_names sn ON sd.matricula = sn.matricula
-    WHERE LOWER(COALESCE(sd.estatus_academico,'')) REGEXP 'riesgo|baja|condicion|irregular|inactiv|reprob'
+    SELECT matricula,
+            COALESCE(nombre, matricula) AS nombre,
+            COALESCE(NULLIF(TRIM(carrera), ''), '—') AS programa,
+            COALESCE(NULLIF(TRIM(estatus_academico), ''), '—') AS estatus
+    FROM student_data
+    WHERE ${RIESGO_SQL}
     ORDER BY nombre
   `));
 
@@ -135,9 +139,6 @@ export function registerDirectorRoutes(app, db) {
     }
   });
 
-  // kv_store
-
-  // advisory keys become { "teacherAdvisories_Lxxxx": "<json>" }
   app.get('/api/kv', async (req, res) => {
     try {
       const [rows] = await db.query("SELECT k, v FROM kv_store WHERE k LIKE 'teacherAdvisories_%'");
