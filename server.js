@@ -44,13 +44,12 @@ registerDirectorRoutes(app, db);
 app.get('/api/students', async (req, res) => {
     try {
         const [rows] = await db.query(`
-            SELECT sd.matricula, sn.nombre, sd.programa 
-            FROM student_data sd 
-            LEFT JOIN student_names sn ON sd.matricula = sn.matricula
+            SELECT matricula, nombre, carrera AS programa
+            FROM student_data
         `);
         res.json(rows);
     } catch (error) {
-        console.error("Error fetching all students:", error);
+        console.error("Error al buscar todos los alumnos:", error);
         res.status(500).json({ error: "Database error" });
     }
 });
@@ -66,7 +65,6 @@ app.get('/api/classes/:nomina', async (req, res) => {
     }
 });
 
-
 app.get('/api/student/:matricula', async (req, res) => {
     try {
         const studentId = req.params.matricula;
@@ -77,7 +75,7 @@ app.get('/api/student/:matricula', async (req, res) => {
             return res.status(404).json({ error: "Student not found" });
         }
 
-        const [classRows] = await db.query("SELECT clave, materia, grupo, crn FROM student_classes WHERE matricula = ?", [studentId]);
+        const [classRows] = await db.query("SELECT crn AS clave, materia, grupo, crn FROM student_classes WHERE matricula = ?", [studentId]);
 
         const studentData = {
             MATRICULA: profileRows[0].matricula,
@@ -93,66 +91,24 @@ app.get('/api/student/:matricula', async (req, res) => {
     }
 });
 
-app.get('/api/students/:crn/:grupo', async (req, res) => {
-    const targetCrn = req.params.crn.trim().toUpperCase();
-    const targetGrupo = req.params.grupo;
-
+app.get('/api/students/:id/:grupo', async (req, res) => {
     try {
+        const targetId = req.params.id ? req.params.id.trim().toUpperCase() : '';
+        const targetGrupo = req.params.grupo ? req.params.grupo.trim() : '';
+
         const sql = `
-            SELECT sd.matricula, sd.nombre, sd.carrera, sc.materia, sc.grupo, sc.crn 
+            SELECT DISTINCT sd.matricula, sd.nombre, sd.carrera, sc.materia, sc.grupo, sc.crn 
             FROM student_data sd
             JOIN student_classes sc ON sd.matricula = sc.matricula
-            WHERE sc.crn = ? AND sc.grupo = ?
+            LEFT JOIN teacher_data td ON sc.crn = td.CRN
+            WHERE (sc.crn = ? OR td.clave = ?) AND sc.grupo = ?
         `;
         
-        const [matchingStudents] = await db.query(sql, [targetCrn, targetGrupo]);
+        const [matchingStudents] = await db.query(sql, [targetId, targetId, targetGrupo]);
         res.json(matchingStudents);
 
     } catch (error) {
-        console.error("Filtering error:", error);
-        res.status(500).json({ error: "Internal server error" });
-    }
-});
-
-app.get('/api/students/:clave/:grupo', async (req, res) => {
-    const targetClave = req.params.clave.trim().toUpperCase();
-    const targetGrupo = parseInt(req.params.grupo);
-
-    try {
-        const sql = `
-            SELECT
-                sd.*,
-                sn.nombre
-            FROM student_data sd
-            LEFT JOIN student_names sn ON sd.matricula = sn.matricula
-        `;
-        const [allStudentsWithNames] = await db.query(sql);
-
-        const subjectMap = {
-            'clave': 'grupo_idi',
-            'matematicas': 'grupo_mat',
-            'espanol': 'grupo_esp',
-            'humanidades': 'grupo_hum',
-            'ciencias': 'grupo_cie',
-            'tecnologia': 'grupo_tec'
-        };
-
-        const matchingStudents = allStudentsWithNames.filter(student => {
-            for (let [subCol, grpCol] of Object.entries(subjectMap)) {
-                const studentClave = (student[subCol] || "").toString().trim().toUpperCase();
-                const studentGrupo = parseInt(student[grpCol]);
-
-                if (studentClave === targetClave && studentGrupo === targetGrupo) {
-                    return true;
-                }
-            }
-            return false;
-        });
-
-        res.json(matchingStudents);
-
-    } catch (error) {
-        console.error("Filtering error:", error);
+        console.error("Error al filtrar por clase:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });
