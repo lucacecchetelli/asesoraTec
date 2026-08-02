@@ -294,7 +294,7 @@
                 currentUserId = user.id || user.nomina;
                 currentTeacherName = user.name;
 
-                if (user.role === 'director') {
+                if (user.role === 'director' || user.isDirector) {
                     const btn = document.getElementById('directorViewBtn');
                     if (btn) btn.style.display = 'inline-block';
                 }
