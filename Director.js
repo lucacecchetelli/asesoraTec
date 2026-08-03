@@ -60,7 +60,7 @@ async function getJSON(url, fallback) {
 }
 
 getJSON('/api/auth/me', null).then(user => {
-  if (!user || user.role !== 'director') { window.location.href = '/'; return; }
+  if (!user || (user.role !== 'director' && !user.isDirector)) { window.location.href = '/'; return; }
   currentDirectorUser = user;
   const el = document.getElementById('dirName');
   if (el) el.textContent = user.name || user.id;
