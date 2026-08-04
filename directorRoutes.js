@@ -14,10 +14,10 @@ export function registerDirectorRoutes(app, db) {
   const getDirProgram = async (req) => {
     try {
       const u = req.session.user;
-      const id = u.id || u.nomina || ''; 
+      const nomina = u.nomina || u.id || ''; 
       const [rows] = await db.query(
-        "SELECT programa FROM director_data WHERE id = ? OR nomina = ?",
-        [id, id]
+        "SELECT programa FROM director_data WHERE nomina = ?",
+        [nomina]
       );
       if (rows.length > 0 && rows[0].programa && rows[0].programa.trim() !== '') {
         return rows[0].programa.trim();
@@ -62,7 +62,8 @@ export function registerDirectorRoutes(app, db) {
   app.get('/api/asesorias-recientes', checkDirectorAuth, async (req, res) => {
     try {
       const prog = await getDirProgram(req);
-      if (!prog) return res.json([]); 
+      if (!prog) return res.json([]);
+
       let sql = "SELECT nombre AS alumno, matricula, carrera AS programa, 'Sin estatus' AS estatus FROM student_data WHERE carrera = ? LIMIT 50";
       const [rows] = await db.query(sql, [prog]);
       res.json(rows);
@@ -75,7 +76,8 @@ export function registerDirectorRoutes(app, db) {
   app.get('/api/students', checkDirectorAuth, async (req, res) => {
     try {
       const prog = await getDirProgram(req);
-      if (!prog) return res.json([]); 
+      if (!prog) return res.json([]);
+
       let sql = "SELECT * FROM student_data WHERE carrera = ?";
       const [rows] = await db.query(sql, [prog]);
       res.json(rows);
@@ -93,7 +95,6 @@ export function registerDirectorRoutes(app, db) {
       }
 
       const [rAlum] = await db.query("SELECT COUNT(*) as c FROM student_data WHERE carrera = ?", [prog]);
-      
       const [rMaestros] = await db.query("SELECT COUNT(DISTINCT nomina) as c FROM teacher_data");
       const [rGrupos] = await db.query("SELECT COUNT(*) as c FROM teacher_data");
 
