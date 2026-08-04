@@ -15,7 +15,7 @@ export function registerDirectorRoutes(app, db) {
   const getDirProgram = async (req) => {
     try {
       const u = req.session.user;
-      const id = u.id || u.matricula || u.nomina;
+      const id = u.id || u.matricula || u.nomina || ''; 
       const [rows] = await db.query(
         "SELECT programa FROM director_data WHERE matricula = ? OR id = ? OR nomina = ?",
         [id, id, id]
@@ -25,6 +25,7 @@ export function registerDirectorRoutes(app, db) {
       }
       return null;
     } catch (e) {
+      console.error("[getDirProgram] Error en DB:", e);
       return null;
     }
   };
@@ -46,7 +47,7 @@ export function registerDirectorRoutes(app, db) {
       
       if (prog) {
         sql += " WHERE carrera LIKE ?";
-        params.push(`%${prog}%`); 
+        params.push(`%${prog}%`);
       }
       sql += " GROUP BY estado";
 
@@ -59,7 +60,10 @@ export function registerDirectorRoutes(app, db) {
       })).sort((a,b) => b.porcentaje - a.porcentaje);
 
       res.json(data);
-    } catch (e) { res.status(500).json({ error: "db error" }); }
+    } catch (e) {
+      console.error("Error en /api/asistencia:", e);
+      res.status(500).json({ error: e.message });
+    }
   });
 
   app.get('/api/asesorias-recientes', checkDirectorAuth, async (req, res) => {
@@ -74,7 +78,10 @@ export function registerDirectorRoutes(app, db) {
       sql += " LIMIT 50";
       const [rows] = await db.query(sql, params);
       res.json(rows);
-    } catch (err) { res.status(500).json({ error: "db error" }); }
+    } catch (e) {
+      console.error("Error en /api/asesorias-recientes:", e);
+      res.status(500).json({ error: e.message });
+    }
   });
 
   app.get('/api/students', checkDirectorAuth, async (req, res) => {
@@ -88,7 +95,10 @@ export function registerDirectorRoutes(app, db) {
       }
       const [rows] = await db.query(sql, params);
       res.json(rows);
-    } catch (err) { res.status(500).json({ error: "db error" }); }
+    } catch (e) {
+      console.error("Error en /api/students:", e);
+      res.status(500).json({ error: e.message });
+    }
   });
 
   app.get('/api/metricas', checkDirectorAuth, async (req, res) => {
@@ -109,7 +119,10 @@ export function registerDirectorRoutes(app, db) {
         total_grupos: rGrupos[0].c || 0,
         pct_en_regla: rRegla[0].p || 0
       }]);
-    } catch (err) { res.status(500).json({ error: "db error" }); }
+    } catch (e) {
+      console.error("Error en /api/metricas:", e);
+      res.status(500).json({ error: e.message });
+    }
   });
 
   app.get('/api/riesgo', checkDirectorAuth, async (req, res) => {
@@ -124,7 +137,10 @@ export function registerDirectorRoutes(app, db) {
       sql += " ORDER BY nombre";
       const [rows] = await db.query(sql, params);
       res.json(rows);
-    } catch (err) { res.status(500).json({ error: "db error" }); }
+    } catch (e) {
+      console.error("Error en /api/riesgo:", e);
+      res.status(500).json({ error: e.message });
+    }
   });
 
   app.get('/api/asesorias-por-dia', async (req, res) => {
@@ -134,7 +150,10 @@ export function registerDirectorRoutes(app, db) {
       const conteo = Object.fromEntries(dias.map(d => [d, 0]));
       for (const a of ases) if (conteo[a.day] !== undefined) conteo[a.day]++;
       res.json(dias.map(d => ({ programa: d, total: conteo[d] })));
-    } catch (e) { res.status(500).json({ error: "db" }); }
+    } catch (e) { 
+      console.error("Error en /api/asesorias-por-dia:", e);
+      res.status(500).json({ error: e.message }); 
+    }
   });
 
   app.get('/api/demanda', async (req, res) => {
@@ -149,7 +168,10 @@ export function registerDirectorRoutes(app, db) {
         .map(([materia, total_asesorias]) => ({ materia, total_asesorias }))
         .sort((x, y) => y.total_asesorias - x.total_asesorias);
       res.json(out);
-    } catch (e) { res.status(500).json({ error: "db" }); }
+    } catch (e) { 
+      console.error("Error en /api/demanda:", e);
+      res.status(500).json({ error: e.message }); 
+    }
   });
 
   app.get('/api/student-history/:matricula', async (req, res) => {
@@ -181,7 +203,8 @@ export function registerDirectorRoutes(app, db) {
       history.sort((x, y) => new Date(y.historyDate) - new Date(x.historyDate));
       res.json(history);
     } catch (e) {
-      res.status(500).json({ error: 'db' });
+      console.error("Error en /api/student-history:", e);
+      res.status(500).json({ error: e.message });
     }
   });
 
@@ -191,7 +214,10 @@ export function registerDirectorRoutes(app, db) {
       const out = {};
       for (const r of rows) out[r.k] = r.v;
       res.json(out);
-    } catch (e) { res.status(500).json({ error: "db" }); }
+    } catch (e) {
+      console.error("Error en /api/kv:", e);
+      res.status(500).json({ error: e.message });
+    }
   });
 
   app.put('/api/kv/:key', async (req, res) => {
@@ -200,13 +226,20 @@ export function registerDirectorRoutes(app, db) {
       const v = (req.body && typeof req.body.value === 'string') ? req.body.value : JSON.stringify(req.body || []);
       await db.query("INSERT INTO kv_store (k, v) VALUES (?, ?) ON DUPLICATE KEY UPDATE v = VALUES(v)", [k, v]);
       res.json({ ok: true });
-    } catch (e) { res.status(500).json({ error: "db" }); }
+    } catch (e) { 
+      console.error("Error en PUT /api/kv:", e);
+      res.status(500).json({ error: e.message }); 
+    }
   });
 
   async function ensureKvStore() {
-    await db.query("CREATE TABLE IF NOT EXISTS kv_store (k VARCHAR(190) PRIMARY KEY, v LONGTEXT) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+    try {
+      await db.query("CREATE TABLE IF NOT EXISTS kv_store (k VARCHAR(190) PRIMARY KEY, v LONGTEXT) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+    } catch(e) {
+      console.error("[Director] ensureKvStore:", e);
+    }
   }
-  ensureKvStore().catch(e => console.error("[Director] ensureKvStore:", e));
+  ensureKvStore();
 
   app.get('/api/logout', (req, res) => {
     if (req.session) {
