@@ -75,7 +75,12 @@ app.get('/api/student/:matricula', async (req, res) => {
             return res.status(404).json({ error: "Student not found" });
         }
 
-        const [classRows] = await db.query("SELECT crn AS clave, materia, grupo, crn FROM student_classes WHERE matricula = ?", [studentId]);
+        const [classRows] = await db.query(`
+            SELECT sc.crn AS clave, sc.materia, sc.grupo, sc.crn, td.clave AS course_clave 
+            FROM student_classes sc
+            LEFT JOIN teacher_data td ON sc.crn = td.CRN
+            WHERE sc.matricula = ?
+        `, [studentId]);
 
         const studentData = {
             MATRICULA: profileRows[0].matricula,

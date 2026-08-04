@@ -1,3 +1,4 @@
+html
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -173,11 +174,17 @@
 
                     const filterSelect = document.getElementById("classFilter");
                     studentProfile.classes.forEach(c => {
-                        const classId = c.clave || c.materia;
-                        studentClaves.push(classId);
+                        if (c.course_clave) studentClaves.push(c.course_clave);
+                        if (c.clave) studentClaves.push(c.clave);
+                        if (c.crn) studentClaves.push(c.crn);
+                        if (c.materia) studentClaves.push(c.materia);
+
+                        const classId = c.course_clave || c.clave;
                         const option = document.createElement("option");
-                        option.value = classId;
-                        if (c.clave && c.materia && c.clave !== c.materia) {
+                        option.value = classId || c.materia;
+                        if (c.course_clave && c.materia && c.course_clave !== c.materia) {
+                            option.textContent = `${c.course_clave} - ${c.materia}`;
+                        } else if (c.clave && c.materia && c.clave !== c.materia) {
                             option.textContent = `${c.clave} - ${c.materia}`;
                         } else {
                             option.textContent = c.nombre || c.materia;
@@ -231,7 +238,9 @@
                 const classFilter = document.getElementById("classFilter").value;
                 const dayFilter = document.getElementById("dayFilter").value;
 
-                let relevantAdvisories = allSystemAdvisories.filter(a => studentClaves.includes(a.clave));
+                let relevantAdvisories = allSystemAdvisories.filter(a => 
+                    studentClaves.includes(a.clave) || (a.crn && studentClaves.includes(a.crn))
+                );
 
                 let available = [];
                 let registered = [];
@@ -258,19 +267,23 @@
                 });
                 history.sort((x, y) => new Date(y.historyDate) - new Date(x.historyDate));
 
-                if (classFilter !== "ALL") available = available.filter(a => a.clave === classFilter);
-                if (dayFilter !== "ALL") available = available.filter(a => a.day === dayFilter);
+                if (classFilter !== "ALL") {
+                    available = available.filter(a => a.clave === classFilter || a.crn === classFilter);
+                }
+                if (dayFilter !== "ALL") {
+                    available = available.filter(a => a.day === dayFilter);
+                }
 
                 renderAvailableMerged(available);
 
                 if (registered.length === 0) {
-                    registeredBody.innerHTML = `<tr><td style="text-align: center; color: #a0aec0; padding: 20px;">No tienes asesorías próximas.</td></tr>`;
+                    registeredBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #a0aec0; padding: 20px;">No tienes asesorías próximas.</td></tr>`;
                 } else {
                     registered.forEach(a => registeredBody.appendChild(createRowHTML(a, 'registered')));
                 }
 
                 if (history.length === 0) {
-                    historyBody.innerHTML = `<tr><td style="text-align: center; color: #a0aec0; padding: 20px;">No hay historial de asistencias.</td></tr>`;
+                    historyBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #a0aec0; padding: 20px;">No hay historial de asistencias.</td></tr>`;
                 } else {
                     history.forEach(record => historyBody.appendChild(createRowHTML(record, 'history')));
                 }
