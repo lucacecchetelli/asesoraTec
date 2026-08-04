@@ -1,16 +1,47 @@
+const styleTag = document.createElement('style');
+styleTag.innerHTML = `
+  header, .dashboard-header, .top-bar, .nav-right, .header-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  #profileBtn {
+    position: relative;
+    z-index: 10;
+  }
+  .student-search-input {
+    background: #1e2330;
+    border: 1px solid #2a2f3d;
+    color: #e2e8f0;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    outline: none;
+    width: 200px;
+    transition: border-color 0.2s;
+  }
+  .student-search-input:focus {
+    border-color: #3b82f6;
+  }
+`;
+document.head.appendChild(styleTag);
+
 const profileBtn   = document.getElementById('profileBtn');
 const dropdownMenu = document.getElementById('dropdownMenu');
 let currentDirectorUser = null;
 
-profileBtn.addEventListener('click', e => {
-  e.stopPropagation();
-  const open = dropdownMenu.classList.toggle('open');
-  profileBtn.setAttribute('aria-expanded', open);
-});
-document.addEventListener('click', () => {
-  dropdownMenu.classList.remove('open');
-  profileBtn.setAttribute('aria-expanded', false);
-});
+if (profileBtn && dropdownMenu) {
+  profileBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    const open = dropdownMenu.classList.toggle('open');
+    profileBtn.setAttribute('aria-expanded', open);
+  });
+  document.addEventListener('click', () => {
+    dropdownMenu.classList.remove('open');
+    profileBtn.setAttribute('aria-expanded', false);
+  });
+}
 
 document.querySelectorAll('.filter-pill').forEach(btn => {
   btn.addEventListener('click', function() {
@@ -67,7 +98,9 @@ getJSON('/api/auth/me', null).then(user => {
 });
 
 getJSON('/api/asistencia', []).then(rows => {
-  new Chart(document.getElementById('donutChart').getContext('2d'), {
+  const donutEl = document.getElementById('donutChart');
+  if (!donutEl) return;
+  new Chart(donutEl.getContext('2d'), {
     type: 'doughnut',
     data: {
       labels: rows.map(r => r.estado),
@@ -107,20 +140,45 @@ const lineOptions = {
   animation: { duration:1000, easing:'easeInOutQuart' }
 };
 
-getJSON('/api/asesorias-por-dia', []).then(rows => {
-  new Chart(document.getElementById('lineChart').getContext('2d'), {
-    type: 'line',
-    data: {
-      labels: rows.map(r => r.programa),
-      datasets: [{
-        label:'Asesorías', data: rows.map(r => Number(r.total)),
-        borderColor:'#2d9cff', backgroundColor:'#2d9cff18', borderWidth:2.5,
-        pointBackgroundColor:'#2d9cff', pointRadius:4, pointHoverRadius:6,
-        tension:0.4, fill:true,
-      }]
-    },
-    options: lineOptions
+let lineChartInstance = null;
+function loadLineChart(view = 'semana') {
+  getJSON(`/api/asesorias-por-dia?view=${view}`, []).then(rows => {
+    const canvas = document.getElementById('lineChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (lineChartInstance) lineChartInstance.destroy();
+    lineChartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: rows.map(r => r.programa),
+        datasets: [{
+          label:'Asesorías', data: rows.map(r => Number(r.total)),
+          borderColor:'#2d9cff', backgroundColor:'#2d9cff18', borderWidth:2.5,
+          pointBackgroundColor:'#2d9cff', pointRadius:4, pointHoverRadius:6,
+          tension:0.4, fill:true,
+        }]
+      },
+      options: lineOptions
+    });
   });
+}
+
+loadLineChart('semana');
+
+document.querySelectorAll('.chart-filters').forEach(filterContainer => {
+  const pills = filterContainer.querySelectorAll('.filter-pill');
+  if (pills.length >= 2 && (pills[0].textContent.toLowerCase().includes('sema') || pills[1].textContent.toLowerCase().includes('mes'))) {
+    pills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        const txt = pill.textContent.trim().toLowerCase();
+        if (txt.includes('sem')) {
+          loadLineChart('semana');
+        } else if (txt.includes('mes')) {
+          loadLineChart('mes');
+        }
+      });
+    });
+  }
 });
 
 const barOptions = {
@@ -140,7 +198,9 @@ const barOptions = {
 };
 
 getJSON('/api/demanda', []).then(rows => {
-  new Chart(document.getElementById('barChart').getContext('2d'), {
+  const barEl = document.getElementById('barChart');
+  if (!barEl) return;
+  new Chart(barEl.getContext('2d'), {
     type: 'bar',
     data: {
       labels: rows.map(r => r.materia),
@@ -173,11 +233,13 @@ getJSON('/api/riesgo', []).then(rows => {
   if (badge) badge.textContent = count;
 });
 
-getJSON('/api/asesorias-recientes', []).then(rows => {
+let globalRecentRows = [];
+
+function renderSessionsTable(rows) {
   const tbody = document.getElementById('sessionsBody');
   if (!tbody) return;
   if (!Array.isArray(rows) || rows.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#64748b;padding:20px;">No hay alumnos asignados a tu programa.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#64748b;padding:20px;">No se encontraron alumnos.</td></tr>';
     return;
   }
   tbody.innerHTML = rows.map(r => {
@@ -189,6 +251,40 @@ getJSON('/api/asesorias-recientes', []).then(rows => {
       `<td><span class="badge ${cls}">${escapeHTML(r.estatus)}</span></td>` +
       `</tr>`;
   }).join('');
+}
+
+getJSON('/api/asesorias-recientes', []).then(rows => {
+  globalRecentRows = rows;
+  renderSessionsTable(rows);
+
+  const tbody = document.getElementById('sessionsBody');
+  if (tbody) {
+    const cardContainer = tbody.closest('.card, .table-card, section, div');
+    if (cardContainer) {
+      const headerEl = cardContainer.querySelector('div, header');
+      if (headerEl && !document.getElementById('studentSearchInput')) {
+        const searchInput = document.createElement('input');
+        searchInput.id = 'studentSearchInput';
+        searchInput.type = 'text';
+        searchInput.className = 'student-search-input';
+        searchInput.placeholder = 'Buscar alumno / matrícula...';
+        
+        searchInput.addEventListener('input', e => {
+          const q = e.target.value.toLowerCase().trim();
+          const filtered = globalRecentRows.filter(r => 
+            (r.alumno && r.alumno.toLowerCase().includes(q)) || 
+            (r.matricula && r.matricula.toLowerCase().includes(q))
+          );
+          renderSessionsTable(filtered);
+        });
+
+        headerEl.style.display = headerEl.style.display || 'flex';
+        headerEl.style.justifyContent = 'space-between';
+        headerEl.style.alignItems = 'center';
+        headerEl.appendChild(searchInput);
+      }
+    }
+  }
 });
 
 function openDModal(id) { document.getElementById(id).style.display = 'flex'; }
@@ -213,7 +309,7 @@ window.openProfileModal = function() {
       </div>
       <div style="display:flex;justify-content:space-between;border-bottom:1px solid #2a2f3d;padding-bottom:14px;">
         <span style="color:#64748b;">Nómina</span>
-        <span style="color:#e2e8f0;font-weight:600;">${escapeHTML(user.id||'—')}</span>
+        <span style="color:#e2e8f0;font-weight:600;">${escapeHTML(user.nomina||user.id||'—')}</span>
       </div>
       <div style="display:flex;justify-content:space-between;padding-bottom:14px;border-bottom:1px solid #2a2f3d;">
         <span style="color:#64748b;">Rol</span>
@@ -239,25 +335,8 @@ window.openAllStudentsModal = function() {
       rows.map(r => `<tr style="border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background=''" onclick="closeDModal('allStudentsModal');openStudentHistory('${escapeHTML(r.matricula)}','${escapeHTML(r.nombre||r.matricula)}')">
         <td style="padding:10px;color:#e2e8f0;">${escapeHTML(r.nombre||'—')}</td>
         <td style="padding:10px;color:#64748b;">${escapeHTML(r.matricula)}</td>
-        <td style="padding:10px;color:#64748b;">${escapeHTML(r.carrera)}</td>
+        <td style="padding:10px;color:#64748b;">${escapeHTML(r.carrera||r.programa||'—')}</td>
       </tr>`).join('') + `</tbody></table>`;
-  });
-};
-
-window.openRiskModal = function() {
-  const body = document.getElementById('riskModalBody');
-  body.innerHTML = '<p style="color:#64748b;text-align:center;padding:24px 0;">Cargando…</p>';
-  openDModal('riskModal');
-  getJSON('/api/riesgo', []).then(rows => {
-    if (!rows.length) { body.innerHTML = '<p style="color:#4ade80;text-align:center;padding:24px 0;">✓ No hay alumnos en riesgo académico.</p>'; return; }
-    body.innerHTML = rows.map(r => `
-      <div style="background:#1e2330;border:1px solid #2a2f3d;border-radius:10px;padding:14px 16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onmouseover="this.style.background='#252b3b'" onmouseout="this.style.background='#1e2330'" onclick="closeDModal('riskModal');openStudentHistory('${escapeHTML(r.matricula)}','${escapeHTML(r.nombre||r.matricula)}')">
-        <div>
-          <div style="color:#e2e8f0;font-weight:600;margin-bottom:4px;">${escapeHTML(r.nombre||r.matricula)}</div>
-          <div style="color:#64748b;font-size:.8rem;">${escapeHTML(r.matricula)} · ${escapeHTML(r.programa||'—')}</div>
-        </div>
-        <span style="background:rgba(248,113,113,.15);color:#f87171;font-size:.75rem;font-weight:600;padding:4px 10px;border-radius:20px;">${escapeHTML(r.estatus||'En riesgo')}</span>
-      </div>`).join('');
   });
 };
 
@@ -265,6 +344,7 @@ window.openStudentHistory = function(matricula, nombre) {
   const modal  = document.getElementById('historyModal');
   const nameEl = document.getElementById('historyModalName');
   const bodyEl = document.getElementById('historyModalBody');
+  if (!modal) return;
   nameEl.textContent = `${nombre} (${matricula})`;
   bodyEl.innerHTML   = '<p style="color:#64748b;text-align:center;padding:24px 0;">Cargando historial…</p>';
   modal.style.display = 'flex';
@@ -286,10 +366,10 @@ window.openStudentHistory = function(matricula, nombre) {
             <span style="color:#2ecc71;font-size:.8rem;white-space:nowrap;">✓ Asistió</span>
           </div>
           <div style="color:#94a3b8;font-size:.82rem;display:flex;gap:16px;flex-wrap:wrap;">
-            <span>📅 ${escapeHTML(dt)}</span>
-            <span>🕐 ${fmt(h.startHour,h.startMinutes)}</span>
-            <span>📍 ${escapeHTML(loc)}</span>
-            <span>👤 ${escapeHTML(h.profesor)}</span>
+            <span>${escapeHTML(dt)}</span>
+            <span>${fmt(h.startHour,h.startMinutes)}</span>
+            <span>${escapeHTML(loc)}</span>
+            <span>${escapeHTML(h.profesor)}</span>
           </div>
           ${h.note ? `<div style="margin-top:10px;padding:10px 12px;background:#141720;border-left:3px solid #3b82f6;border-radius:0 8px 8px 0;font-size:.83rem;color:#cbd5e1;"><strong style="color:#3b82f6;">Nota:</strong> ${escapeHTML(h.note)}</div>` : ''}
         </div>`;
@@ -307,8 +387,10 @@ window.closeHistoryModal = () => document.getElementById('historyModal').style.d
   const r1    = document.getElementById('dRule1');
   const r2    = document.getElementById('dRule2');
   const r3    = document.getElementById('dRule3');
+  if (!btn || boxes.length === 0) return;
 
   function setRule(el, state) {
+    if (!el) return;
     const txt = el.textContent.slice(3);
     el.style.color = state === true ? '#4ade80' : state === false ? '#f87171' : '#64748b';
     el.textContent = (state === true ? '✓  ' : state === false ? '✗  ' : '○  ') + txt;

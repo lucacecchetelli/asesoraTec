@@ -116,11 +116,37 @@ export function registerDirectorRoutes(app, db) {
 
   app.get('/api/asesorias-por-dia', async (req, res) => {
     try {
+      const view = req.query.view || 'semana';
       const ases = await leerAsesorias();
-      const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
-      const conteo = Object.fromEntries(dias.map(d => [d, 0]));
-      for (const a of ases) if (conteo[a.day] !== undefined) conteo[a.day]++;
-      res.json(dias.map(d => ({ programa: d, total: conteo[d] })));
+      
+      if (view === 'mes') {
+        const conteoMes = { 'Semana 1': 0, 'Semana 2': 0, 'Semana 3': 0, 'Semana 4': 0, 'Semana 5': 0 };
+        for (const a of ases) {
+          const history = Array.isArray(a.attendanceHistory) ? a.attendanceHistory : [];
+          for (const h of history) {
+            if (h.historyDate) {
+              const d = new Date(h.historyDate);
+              if (!isNaN(d)) {
+                const dayOfMonth = d.getDate();
+                const weekNum = Math.min(5, Math.ceil(dayOfMonth / 7));
+                const key = `Semana ${weekNum}`;
+                if (conteoMes[key] !== undefined) conteoMes[key]++;
+              }
+            }
+          }
+        }
+        const totalRecords = Object.values(conteoMes).reduce((a, b) => a + b, 0);
+        if (totalRecords === 0 && ases.length > 0) {
+          conteoMes['Semana 1'] = ases.length;
+        }
+        const out = Object.keys(conteoMes).map(k => ({ programa: k, total: conteoMes[k] }));
+        return res.json(out);
+      } else {
+        const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+        const conteo = Object.fromEntries(dias.map(d => [d, 0]));
+        for (const a of ases) if (conteo[a.day] !== undefined) conteo[a.day]++;
+        res.json(dias.map(d => ({ programa: d, total: conteo[d] })));
+      }
     } catch (e) { 
       console.error("Error en /api/asesorias-por-dia:", e);
       res.status(500).json({ error: e.message }); 
