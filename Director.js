@@ -239,7 +239,7 @@ window.openAllStudentsModal = function() {
       rows.map(r => `<tr style="border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background=''" onclick="closeDModal('allStudentsModal');openStudentHistory('${escapeHTML(r.matricula)}','${escapeHTML(r.nombre||r.matricula)}')">
         <td style="padding:10px;color:#e2e8f0;">${escapeHTML(r.nombre||'—')}</td>
         <td style="padding:10px;color:#64748b;">${escapeHTML(r.matricula)}</td>
-        <td style="padding:10px;color:#64748b;">${escapeHTML(r.programa||'—')}</td>
+        <td style="padding:10px;color:#64748b;">${escapeHTML(r.carrera)}</td>
       </tr>`).join('') + `</tbody></table>`;
   });
 };
