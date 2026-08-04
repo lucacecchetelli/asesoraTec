@@ -1,14 +1,4 @@
 export function registerDirectorRoutes(app, db) {
-  const run = (sql) => async (req, res) => {
-    try {
-      const [rows] = await db.query(sql);
-      res.json(rows);
-    } catch (err) {
-      console.error("[Director] Error de consulta:", err);
-      res.status(500).json({ error: "Error al consultar la base de datos" });
-    }
-  };
-
   const RIESGO_SQL = "LOWER(COALESCE(estatus_academico,'')) REGEXP 'riesgo|baja|condicion|irregular|inactiv|reprob'";
 
   const checkDirectorAuth = (req, res, next) => {
@@ -22,13 +12,22 @@ export function registerDirectorRoutes(app, db) {
     next();
   };
 
-  app.get('/api/asistencia', run(`
-    SELECT COALESCE(NULLIF(TRIM(estatus_academico), ''), 'Sin estatus') AS estado,
-           ROUND(100 * COUNT(*) / (SELECT COUNT(*) FROM student_data), 0) AS porcentaje
-    FROM student_data
-    GROUP BY estado
-    ORDER BY porcentaje DESC
-  `));
+  const getDirProgram = async (req) => {
+    try {
+      const u = req.session.user;
+      const id = u.id || u.matricula || u.nomina;
+      const [rows] = await db.query(
+        "SELECT programa FROM director_data WHERE matricula = ? OR id = ? OR nomina = ?",
+        [id, id, id]
+      );
+      if (rows.length > 0 && rows[0].programa && rows[0].programa.trim() !== '') {
+        return rows[0].programa.trim();
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  };
 
   async function leerAsesorias() {
     const [rows] = await db.query("SELECT v FROM kv_store WHERE k LIKE 'teacherAdvisories_%'");
@@ -39,67 +38,93 @@ export function registerDirectorRoutes(app, db) {
     return todas;
   }
 
+  app.get('/api/asistencia', checkDirectorAuth, async (req, res) => {
+    try {
+      const prog = await getDirProgram(req);
+      let sql = "SELECT COALESCE(NULLIF(TRIM(estatus_academico), ''), 'Sin estatus') AS estado, COUNT(*) as total FROM student_data";
+      let params = [];
+      
+      if (prog) {
+        sql += " WHERE carrera LIKE ?";
+        params.push(`%${prog}%`); 
+      }
+      sql += " GROUP BY estado";
+
+      const [rows] = await db.query(sql, params);
+      const totalAlumnos = rows.reduce((acc, r) => acc + Number(r.total), 0);
+      
+      const data = rows.map(r => ({
+        estado: r.estado,
+        porcentaje: totalAlumnos === 0 ? 0 : Math.round((Number(r.total) / totalAlumnos) * 100)
+      })).sort((a,b) => b.porcentaje - a.porcentaje);
+
+      res.json(data);
+    } catch (e) { res.status(500).json({ error: "db error" }); }
+  });
+
   app.get('/api/asesorias-recientes', checkDirectorAuth, async (req, res) => {
     try {
-      const user = req.session.user;
-      const directorId = user.id || user.matricula || user.nomina;
-
-      const [dirRows] = await db.query(
-        "SELECT programa FROM director_data WHERE matricula = ? OR id = ? OR nomina = ?",
-        [directorId, directorId, directorId]
-      );
-
-      if (dirRows.length === 0 || !dirRows[0].programa) {
-        return res.json([]);
+      const prog = await getDirProgram(req);
+      let sql = "SELECT nombre AS alumno, matricula, carrera AS programa, estatus_academico AS estatus FROM student_data";
+      let params = [];
+      if (prog) {
+        sql += " WHERE carrera LIKE ?";
+        params.push(`%${prog}%`);
       }
-
-      const directorProgram = dirRows[0].programa;
-
-      const [rows] = await db.query(
-        `SELECT
-          nombre AS alumno,
-          matricula,
-          carrera AS programa,
-          estatus_academico AS estatus
-          FROM student_data
-        WHERE TRIM(LOWER(carrera)) = TRIM(LOWER(?))
-        LIMIT 50`,
-        [directorProgram]
-      );
-      
+      sql += " LIMIT 50";
+      const [rows] = await db.query(sql, params);
       res.json(rows);
-    } catch (err) {
-      console.error("[Director] Error al obtener alumnos:", err);
-      res.status(500).json({ error: "Error interno del servidor" });
-    }
+    } catch (err) { res.status(500).json({ error: "db error" }); }
   });
 
   app.get('/api/students', checkDirectorAuth, async (req, res) => {
     try {
-      const user = req.session.user;
-      const directorId = user.id || user.matricula || user.nomina;
-
-      const [dirRows] = await db.query(
-        "SELECT programa FROM director_data WHERE matricula = ? OR id = ? OR nomina = ?",
-        [directorId, directorId, directorId]
-      );
-
-      if (dirRows.length === 0 || !dirRows[0].programa) {
-        return res.json([]);
+      const prog = await getDirProgram(req);
+      let sql = "SELECT * FROM student_data";
+      let params = [];
+      if (prog) {
+        sql += " WHERE carrera LIKE ?";
+        params.push(`%${prog}%`);
       }
-
-      const directorProgram = dirRows[0].programa;
-
-      const [rows] = await db.query(
-        "SELECT * FROM student_data WHERE TRIM(LOWER(carrera)) = TRIM(LOWER(?))",
-        [directorProgram]
-      );
-      
+      const [rows] = await db.query(sql, params);
       res.json(rows);
-    } catch (err) {
-      console.error("[Director] Error al obtener todos los alumnos:", err);
-      res.status(500).json({ error: "Error interno del servidor" });
-    }
+    } catch (err) { res.status(500).json({ error: "db error" }); }
+  });
+
+  app.get('/api/metricas', checkDirectorAuth, async (req, res) => {
+    try {
+      const prog = await getDirProgram(req);
+      let cond = prog ? "WHERE carrera LIKE ?" : "";
+      let params = prog ? [`%${prog}%`] : [];
+
+      const [rAlum] = await db.query(`SELECT COUNT(*) as c FROM student_data ${cond}`, params);
+      const [rRegla] = await db.query(`SELECT ROUND(100 * SUM(CASE WHEN ${RIESGO_SQL} THEN 0 ELSE 1 END) / COUNT(*), 0) as p FROM student_data ${cond}`, params);
+      
+      const [rMaestros] = await db.query("SELECT COUNT(DISTINCT nomina) as c FROM teacher_data");
+      const [rGrupos] = await db.query("SELECT COUNT(*) as c FROM teacher_data");
+
+      res.json([{
+        total_alumnos: rAlum[0].c || 0,
+        total_maestros: rMaestros[0].c || 0,
+        total_grupos: rGrupos[0].c || 0,
+        pct_en_regla: rRegla[0].p || 0
+      }]);
+    } catch (err) { res.status(500).json({ error: "db error" }); }
+  });
+
+  app.get('/api/riesgo', checkDirectorAuth, async (req, res) => {
+    try {
+      const prog = await getDirProgram(req);
+      let sql = `SELECT matricula, COALESCE(nombre, matricula) AS nombre, COALESCE(NULLIF(TRIM(carrera), ''), '—') AS programa, COALESCE(NULLIF(TRIM(estatus_academico), ''), '—') AS estatus FROM student_data WHERE ${RIESGO_SQL}`;
+      let params = [];
+      if (prog) {
+        sql += " AND carrera LIKE ?";
+        params.push(`%${prog}%`);
+      }
+      sql += " ORDER BY nombre";
+      const [rows] = await db.query(sql, params);
+      res.json(rows);
+    } catch (err) { res.status(500).json({ error: "db error" }); }
   });
 
   app.get('/api/asesorias-por-dia', async (req, res) => {
@@ -109,7 +134,7 @@ export function registerDirectorRoutes(app, db) {
       const conteo = Object.fromEntries(dias.map(d => [d, 0]));
       for (const a of ases) if (conteo[a.day] !== undefined) conteo[a.day]++;
       res.json(dias.map(d => ({ programa: d, total: conteo[d] })));
-    } catch (e) { console.error(e); res.status(500).json({ error: "db" }); }
+    } catch (e) { res.status(500).json({ error: "db" }); }
   });
 
   app.get('/api/demanda', async (req, res) => {
@@ -124,27 +149,8 @@ export function registerDirectorRoutes(app, db) {
         .map(([materia, total_asesorias]) => ({ materia, total_asesorias }))
         .sort((x, y) => y.total_asesorias - x.total_asesorias);
       res.json(out);
-    } catch (e) { console.error(e); res.status(500).json({ error: "db" }); }
+    } catch (e) { res.status(500).json({ error: "db" }); }
   });
-
-  app.get('/api/metricas', run(`
-    SELECT
-      (SELECT COUNT(*) FROM student_data) AS total_alumnos,
-      (SELECT COUNT(DISTINCT nomina) FROM teacher_data) AS total_maestros,
-      (SELECT COUNT(*) FROM teacher_data) AS total_grupos,
-      (SELECT ROUND(100 * SUM(CASE WHEN ${RIESGO_SQL} THEN 0 ELSE 1 END) / COUNT(*), 0)
-    FROM student_data) AS pct_en_regla
-  `));
-
-  app.get('/api/riesgo', run(`
-    SELECT matricula,
-            COALESCE(nombre, matricula) AS nombre,
-            COALESCE(NULLIF(TRIM(carrera), ''), '—') AS programa,
-            COALESCE(NULLIF(TRIM(estatus_academico), ''), '—') AS estatus
-    FROM student_data
-    WHERE ${RIESGO_SQL}
-    ORDER BY nombre
-  `));
 
   app.get('/api/student-history/:matricula', async (req, res) => {
     try {
@@ -175,7 +181,6 @@ export function registerDirectorRoutes(app, db) {
       history.sort((x, y) => new Date(y.historyDate) - new Date(x.historyDate));
       res.json(history);
     } catch (e) {
-      console.error('[Director] student-history error:', e);
       res.status(500).json({ error: 'db' });
     }
   });
@@ -186,7 +191,7 @@ export function registerDirectorRoutes(app, db) {
       const out = {};
       for (const r of rows) out[r.k] = r.v;
       res.json(out);
-    } catch (e) { console.error(e); res.status(500).json({ error: "db" }); }
+    } catch (e) { res.status(500).json({ error: "db" }); }
   });
 
   app.put('/api/kv/:key', async (req, res) => {
@@ -195,7 +200,7 @@ export function registerDirectorRoutes(app, db) {
       const v = (req.body && typeof req.body.value === 'string') ? req.body.value : JSON.stringify(req.body || []);
       await db.query("INSERT INTO kv_store (k, v) VALUES (?, ?) ON DUPLICATE KEY UPDATE v = VALUES(v)", [k, v]);
       res.json({ ok: true });
-    } catch (e) { console.error(e); res.status(500).json({ error: "db" }); }
+    } catch (e) { res.status(500).json({ error: "db" }); }
   });
 
   async function ensureKvStore() {
