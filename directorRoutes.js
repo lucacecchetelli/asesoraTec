@@ -41,18 +41,12 @@ export function registerDirectorRoutes(app, db) {
   app.get('/api/asistencia', checkDirectorAuth, async (req, res) => {
     try {
       const prog = await getDirProgram(req);
-      let sql = "SELECT 'Sin estatus' AS estado, COUNT(*) as total FROM student_data";
-      let params = [];
-      
-      if (prog) {
-        sql += " WHERE carrera LIKE ?";
-        params.push(`%${prog}%`);
-      }
-      sql += " GROUP BY estado";
+      if (!prog) return res.json([]);
 
-      const [rows] = await db.query(sql, params);
-      const totalAlumnos = rows.reduce((acc, r) => acc + Number(r.total), 0);
+      let sql = "SELECT 'Sin estatus' AS estado, COUNT(*) as total FROM student_data WHERE carrera = ? GROUP BY estado";
+      const [rows] = await db.query(sql, [prog]);
       
+      const totalAlumnos = rows.reduce((acc, r) => acc + Number(r.total), 0);
       const data = rows.map(r => ({
         estado: r.estado,
         porcentaje: totalAlumnos === 0 ? 0 : Math.round((Number(r.total) / totalAlumnos) * 100)
@@ -68,15 +62,9 @@ export function registerDirectorRoutes(app, db) {
   app.get('/api/asesorias-recientes', checkDirectorAuth, async (req, res) => {
     try {
       const prog = await getDirProgram(req);
-
-      let sql = "SELECT nombre AS alumno, matricula, carrera AS programa, 'Sin estatus' AS estatus FROM student_data";
-      let params = [];
-      if (prog) {
-        sql += " WHERE carrera LIKE ?";
-        params.push(`%${prog}%`);
-      }
-      sql += " LIMIT 50";
-      const [rows] = await db.query(sql, params);
+      if (!prog) return res.json([]); 
+      let sql = "SELECT nombre AS alumno, matricula, carrera AS programa, 'Sin estatus' AS estatus FROM student_data WHERE carrera = ? LIMIT 50";
+      const [rows] = await db.query(sql, [prog]);
       res.json(rows);
     } catch (e) {
       console.error("Error en /api/asesorias-recientes:", e);
@@ -87,13 +75,9 @@ export function registerDirectorRoutes(app, db) {
   app.get('/api/students', checkDirectorAuth, async (req, res) => {
     try {
       const prog = await getDirProgram(req);
-      let sql = "SELECT * FROM student_data";
-      let params = [];
-      if (prog) {
-        sql += " WHERE carrera LIKE ?";
-        params.push(`%${prog}%`);
-      }
-      const [rows] = await db.query(sql, params);
+      if (!prog) return res.json([]); 
+      let sql = "SELECT * FROM student_data WHERE carrera = ?";
+      const [rows] = await db.query(sql, [prog]);
       res.json(rows);
     } catch (e) {
       console.error("Error en /api/students:", e);
@@ -104,10 +88,11 @@ export function registerDirectorRoutes(app, db) {
   app.get('/api/metricas', checkDirectorAuth, async (req, res) => {
     try {
       const prog = await getDirProgram(req);
-      let cond = prog ? "WHERE carrera LIKE ?" : "";
-      let params = prog ? [`%${prog}%`] : [];
+      if (!prog) {
+        return res.json([{ total_alumnos: 0, total_maestros: 0, total_grupos: 0, pct_en_regla: 0 }]);
+      }
 
-      const [rAlum] = await db.query(`SELECT COUNT(*) as c FROM student_data ${cond}`, params);
+      const [rAlum] = await db.query("SELECT COUNT(*) as c FROM student_data WHERE carrera = ?", [prog]);
       
       const [rMaestros] = await db.query("SELECT COUNT(DISTINCT nomina) as c FROM teacher_data");
       const [rGrupos] = await db.query("SELECT COUNT(*) as c FROM teacher_data");
