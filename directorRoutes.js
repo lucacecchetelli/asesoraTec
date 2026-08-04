@@ -39,23 +39,65 @@ export function registerDirectorRoutes(app, db) {
     return todas;
   }
 
-  // RUTA CORREGIDA: Ya no usa student_names ni dir_programa obsoletos
   app.get('/api/asesorias-recientes', checkDirectorAuth, async (req, res) => {
     try {
-      const sql = `
-        SELECT
+      const user = req.session.user;
+      const directorId = user.id || user.matricula || user.nomina;
+
+      const [dirRows] = await db.query(
+        "SELECT programa FROM director_data WHERE matricula = ? OR id = ? OR nomina = ?",
+        [directorId, directorId, directorId]
+      );
+
+      if (dirRows.length === 0 || !dirRows[0].programa) {
+        return res.json([]);
+      }
+
+      const directorProgram = dirRows[0].programa;
+
+      const [rows] = await db.query(
+        `SELECT
           nombre AS alumno,
           matricula,
           carrera AS programa,
           estatus_academico AS estatus
-        FROM student_data
-        LIMIT 50
-      `;
+          FROM student_data
+        WHERE TRIM(LOWER(carrera)) = TRIM(LOWER(?))
+        LIMIT 50`,
+        [directorProgram]
+      );
       
-      const [rows] = await db.query(sql);
       res.json(rows);
     } catch (err) {
       console.error("[Director] Error al obtener alumnos:", err);
+      res.status(500).json({ error: "Error interno del servidor" });
+    }
+  });
+
+  app.get('/api/students', checkDirectorAuth, async (req, res) => {
+    try {
+      const user = req.session.user;
+      const directorId = user.id || user.matricula || user.nomina;
+
+      const [dirRows] = await db.query(
+        "SELECT programa FROM director_data WHERE matricula = ? OR id = ? OR nomina = ?",
+        [directorId, directorId, directorId]
+      );
+
+      if (dirRows.length === 0 || !dirRows[0].programa) {
+        return res.json([]);
+      }
+
+      const directorProgram = dirRows[0].programa;
+
+      const [rows] = await db.query(
+        "SELECT * FROM student_data WHERE TRIM(LOWER(carrera)) = TRIM(LOWER(?))",
+        [directorProgram]
+      );
+      
+      res.json(rows);
+    } catch (err) {
+      console.error("[Director] Error al obtener todos los alumnos:", err);
       res.status(500).json({ error: "Error interno del servidor" });
     }
   });
@@ -91,10 +133,9 @@ export function registerDirectorRoutes(app, db) {
       (SELECT COUNT(DISTINCT nomina) FROM teacher_data) AS total_maestros,
       (SELECT COUNT(*) FROM teacher_data) AS total_grupos,
       (SELECT ROUND(100 * SUM(CASE WHEN ${RIESGO_SQL} THEN 0 ELSE 1 END) / COUNT(*), 0)
-         FROM student_data) AS pct_en_regla
+    FROM student_data) AS pct_en_regla
   `));
 
-  // RUTA CORREGIDA: Sin depender de student_names
   app.get('/api/riesgo', run(`
     SELECT matricula,
             COALESCE(nombre, matricula) AS nombre,
