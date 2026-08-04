@@ -1,5 +1,4 @@
 export function registerDirectorRoutes(app, db) {
-  const RIESGO_SQL = "LOWER(COALESCE(estatus_academico,'')) REGEXP 'riesgo|baja|condicion|irregular|inactiv|reprob'";
 
   const checkDirectorAuth = (req, res, next) => {
     if (!req.session || !req.session.user) {
@@ -15,10 +14,10 @@ export function registerDirectorRoutes(app, db) {
   const getDirProgram = async (req) => {
     try {
       const u = req.session.user;
-      const id = u.id || u.matricula || u.nomina || ''; 
+      const id = u.id || u.nomina || ''; 
       const [rows] = await db.query(
-        "SELECT programa FROM director_data WHERE matricula = ? OR id = ? OR nomina = ?",
-        [id, id, id]
+        "SELECT programa FROM director_data WHERE id = ? OR nomina = ?",
+        [id, id]
       );
       if (rows.length > 0 && rows[0].programa && rows[0].programa.trim() !== '') {
         return rows[0].programa.trim();
@@ -42,7 +41,7 @@ export function registerDirectorRoutes(app, db) {
   app.get('/api/asistencia', checkDirectorAuth, async (req, res) => {
     try {
       const prog = await getDirProgram(req);
-      let sql = "SELECT COALESCE(NULLIF(TRIM(estatus_academico), ''), 'Sin estatus') AS estado, COUNT(*) as total FROM student_data";
+      let sql = "SELECT 'Sin estatus' AS estado, COUNT(*) as total FROM student_data";
       let params = [];
       
       if (prog) {
@@ -57,7 +56,7 @@ export function registerDirectorRoutes(app, db) {
       const data = rows.map(r => ({
         estado: r.estado,
         porcentaje: totalAlumnos === 0 ? 0 : Math.round((Number(r.total) / totalAlumnos) * 100)
-      })).sort((a,b) => b.porcentaje - a.porcentaje);
+      }));
 
       res.json(data);
     } catch (e) {
@@ -69,7 +68,8 @@ export function registerDirectorRoutes(app, db) {
   app.get('/api/asesorias-recientes', checkDirectorAuth, async (req, res) => {
     try {
       const prog = await getDirProgram(req);
-      let sql = "SELECT nombre AS alumno, matricula, carrera AS programa, estatus_academico AS estatus FROM student_data";
+
+      let sql = "SELECT nombre AS alumno, matricula, carrera AS programa, 'Sin estatus' AS estatus FROM student_data";
       let params = [];
       if (prog) {
         sql += " WHERE carrera LIKE ?";
@@ -108,7 +108,6 @@ export function registerDirectorRoutes(app, db) {
       let params = prog ? [`%${prog}%`] : [];
 
       const [rAlum] = await db.query(`SELECT COUNT(*) as c FROM student_data ${cond}`, params);
-      const [rRegla] = await db.query(`SELECT ROUND(100 * SUM(CASE WHEN ${RIESGO_SQL} THEN 0 ELSE 1 END) / COUNT(*), 0) as p FROM student_data ${cond}`, params);
       
       const [rMaestros] = await db.query("SELECT COUNT(DISTINCT nomina) as c FROM teacher_data");
       const [rGrupos] = await db.query("SELECT COUNT(*) as c FROM teacher_data");
@@ -117,7 +116,7 @@ export function registerDirectorRoutes(app, db) {
         total_alumnos: rAlum[0].c || 0,
         total_maestros: rMaestros[0].c || 0,
         total_grupos: rGrupos[0].c || 0,
-        pct_en_regla: rRegla[0].p || 0
+        pct_en_regla: 100
       }]);
     } catch (e) {
       console.error("Error en /api/metricas:", e);
@@ -126,21 +125,7 @@ export function registerDirectorRoutes(app, db) {
   });
 
   app.get('/api/riesgo', checkDirectorAuth, async (req, res) => {
-    try {
-      const prog = await getDirProgram(req);
-      let sql = `SELECT matricula, COALESCE(nombre, matricula) AS nombre, COALESCE(NULLIF(TRIM(carrera), ''), '—') AS programa, COALESCE(NULLIF(TRIM(estatus_academico), ''), '—') AS estatus FROM student_data WHERE ${RIESGO_SQL}`;
-      let params = [];
-      if (prog) {
-        sql += " AND carrera LIKE ?";
-        params.push(`%${prog}%`);
-      }
-      sql += " ORDER BY nombre";
-      const [rows] = await db.query(sql, params);
-      res.json(rows);
-    } catch (e) {
-      console.error("Error en /api/riesgo:", e);
-      res.status(500).json({ error: e.message });
-    }
+    res.json([]);
   });
 
   app.get('/api/asesorias-por-dia', async (req, res) => {
