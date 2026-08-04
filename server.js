@@ -214,6 +214,37 @@ app.post('/api/change-password', async (req, res) => {
     }
 });
 
+app.get('/api/director/students', async (req, res) => {
+    try {
+        if (!req.session || !req.session.user) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+        
+        const directorId = req.session.user.id || req.session.user.matricula;
+
+        const [dirRows] = await db.query(
+            "SELECT programa FROM director_data WHERE matricula = ? OR id = ?", 
+            [directorId, directorId]
+        );
+
+        if (dirRows.length === 0) {
+            return res.status(404).json({ error: "Director not found" });
+        }
+
+        const directorProgram = dirRows[0].programa;
+
+        const [students] = await db.query(
+            "SELECT * FROM student_data WHERE carrera = ?", 
+            [directorProgram]
+        );
+
+        res.json(students);
+    } catch (error) {
+        console.error("Director students error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
 app.use(express.static(__dirname));
 
 app.listen(PORT, () => {
