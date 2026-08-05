@@ -722,13 +722,44 @@
             renderTeacherAgenda();
         };
 
-        window.notifyStudents = function(advisoryId) {
+        window.notifyStudents = async function(advisoryId) {
             const advisory = teacherAdvisories.find(a => a.id === advisoryId);
+            
             if (!advisory || !advisory.enrolledStudents || advisory.enrolledStudents.length === 0) {
                 alert("No hay alumnos inscritos para notificar.");
                 return;
             }
-            alert(`Notificación enviada exitosamente a los ${advisory.enrolled} alumno(s) inscritos en la asesoría de ${advisory.className}.`);
+
+            try {
+                const format = (h, m) => `${h.toString().padStart(2,'0')}:${m.toString().padStart(2, '0')}`;
+                const startTime = format(advisory.startHour, advisory.startMinutes);
+                const endTime = format(advisory.startHour + 1, advisory.startMinutes);
+                
+                const placeDetails = advisory.modality === 'En línea' ? `En línea (Liga: ${advisory.meetingLink})` : advisory.place;
+
+                const response = await fetch('/api/notify-students', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        matriculas: advisory.enrolledStudents,
+                        className: advisory.className,
+                        place: placeDetails,
+                        time: `${startTime} - ${endTime}`,
+                        profesor: advisory.profesor
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert(`Notificación enviada exitosamente a los ${advisory.enrolled} alumno(s) inscritos en la asesoría de ${advisory.className}.`);
+                } else {
+                    alert("Error del servidor: No se pudieron enviar los correos.");
+                }
+            } catch (error) {
+                console.error("Error de conexión:", error);
+                alert("Ocurrió un error al intentar comunicar con el servidor.");
+            }
         };
 
         function renderTeacherAgenda() {

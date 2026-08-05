@@ -3,6 +3,7 @@ import "dotenv/config";
 import express from "express";
 import session from "express-session";
 import mysql from "mysql2/promise";
+import nodemailer from "nodemailer";
 import path from "path";
 import { fileURLToPath } from "url";
 import authRouter from "./auth.js";
@@ -21,9 +22,19 @@ export const db = mysql.createPool({
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
-    port: process.env.DB_PORT || 3306 
+    port: process.env.DB_PORT || 3306
 });
 
+const transporter = nodemailer.createTransport({
+    host: 'smtp.office365.com',
+    port: 587,
+    secure: false,
+    auth: {
+        user: process.env.OUTLOOK_EMAIL,
+        pass: process.env.OUTLOOK_PASSWORD
+    },
+    tls: { ciphers: 'SSLv3' }
+});
 
 app.use(express.json());
 
@@ -242,6 +253,71 @@ app.get('/api/director/students', async (req, res) => {
     } catch (error) {
         console.error("Director students error:", error);
         res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+app.post('/api/notify-students', async (req, res) => {
+    const { matriculas, className, place, time, profesor } = req.body;
+    const destinatarios = matriculas.map(m => `${m}@tec.mx`).join(', ');
+
+    try {
+        await transporter.sendMail({
+            from: `"AsesoraTec" <${process.env.OUTLOOK_EMAIL}>`,
+            to: destinatarios,
+            subject: `Nueva Asesoría Asignada: ${className}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; color: #333;">
+                    <h2>¡Hola! Has sido ingresado a una nueva asesoría.</h2>
+                    <p>El profesor <strong>${profesor}</strong> te ha agregado a la siguiente sesión:</p>
+                    <ul>
+                        <li><strong>Materia:</strong> ${className}</li>
+                        <li><strong>Lugar/Modalidad:</strong> ${place}</li>
+                        <li><strong>Horario:</strong> ${time} hrs</li>
+                    </ul>
+                    <p>¡Te esperamos!</p>
+                </div>
+            `
+        });
+        res.json({ success: true, message: 'Correos enviados exitosamente' });
+    } catch (error) {
+        console.error("Error al enviar correos:", error);
+        res.status(500).json({ success: false, error: 'Fallo al procesar los correos' });
+    }
+});
+
+app.post('/api/recover-password', async (req, res) => {
+    const { identificador } = req.body; 
+    let destinatario = "";
+    
+    try {
+        if (identificador.toLowerCase().startsWith('a0')) {
+            destinatario = `${identificador.toLowerCase()}@tec.mx`;
+        } else {
+            const [teacher] = await db.query('SELECT correo FROM teacher_data WHERE nomina = ?', [identificador]);
+            if (teacher.length > 0) {
+                destinatario = teacher[0].correo;
+            } else {
+                return res.status(404).json({ success: false, error: 'Maestro no encontrado' });
+            }
+        }
+
+        const recoveryPin = Math.floor(10000 + Math.random() * 90000); 
+        
+        await transporter.sendMail({
+            from: `"Soporte AsesoraTec" <${process.env.OUTLOOK_EMAIL}>`,
+            to: destinatario,
+            subject: 'Recuperación de Contraseña - AsesoraTec',
+            html: `
+                <h3>Recuperación de acceso</h3>
+                <p>Tu código temporal para cambiar la contraseña es: <strong>${recoveryPin}</strong></p>
+                <p>Si no solicitaste este cambio, ignora este correo.</p>
+            `
+        });
+
+        res.json({ success: true, message: 'Correo de recuperación enviado.' });
+    } catch (error) {
+        console.error("Error en recuperación:", error);
+        res.status(500).json({ success: false, error: 'Error al procesar la solicitud' });
     }
 });
 
