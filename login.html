@@ -58,7 +58,7 @@
             <script src="login.js"></script>
 
             <div class="links">
-                <a href="#">¿Olvidaste tu contraseña?</a>
+                <a href="#" onclick="recoverPassword()">¿Olvidaste tu contraseña?</a>
                 <a href="set-password.html">Crear cuenta</a>
             </div>
         </div>
@@ -72,6 +72,50 @@
             © 2026 Tecnológico de Monterrey
         </div>
     </footer>
+
+    <script>
+        async function recoverPassword() {
+            const identificador = prompt("Ingresa tu nómina o matrícula (ej. A0... o L0...):");
+            if (!identificador) return;
+
+            try {
+                const response = await fetch('/api/recover-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ identificador })
+                });
+                const data = await response.json();
+
+                if (!data.success) {
+                    alert(data.error || "Error al solicitar la recuperación.");
+                    return;
+                }
+
+                const pin = prompt("Te hemos enviado un código a tu correo. Ingrésalo aquí:");
+                if (!pin) return;
+
+                const newPassword = prompt("Ingresa tu nueva contraseña (5 dígitos numéricos sin repeticiones):");
+                if (!newPassword) return;
+
+                const resetResponse = await fetch('/api/reset-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pin, newPassword })
+                });
+                const resetData = await resetResponse.json();
+
+                if (resetData.success) {
+                    alert("¡Contraseña cambiada exitosamente! Ya puedes iniciar sesión.");
+                } else {
+                    alert(resetData.error || "Error al cambiar la contraseña.");
+                }
+
+            } catch (error) {
+                console.error(error);
+                alert("Error de conexión con el servidor. Intenta nuevamente.");
+            }
+        }
+    </script>
 
 </body>
 </html>

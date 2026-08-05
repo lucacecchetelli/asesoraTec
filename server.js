@@ -303,6 +303,9 @@ app.post('/api/recover-password', async (req, res) => {
 
         const recoveryPin = Math.floor(10000 + Math.random() * 90000); 
         
+        req.session.recoveryPin = recoveryPin;
+        req.session.recoveryUserId = identificador.toUpperCase();
+        
         await transporter.sendMail({
             from: `"Soporte AsesoraTec" <${process.env.OUTLOOK_EMAIL}>`,
             to: destinatario,
@@ -318,6 +321,36 @@ app.post('/api/recover-password', async (req, res) => {
     } catch (error) {
         console.error("Error en recuperación:", error);
         res.status(500).json({ success: false, error: 'Error al procesar la solicitud' });
+    }
+});
+
+app.post('/api/reset-password', async (req, res) => {
+    const { pin, newPassword } = req.body;
+
+    if (!req.session.recoveryPin || req.session.recoveryPin.toString() !== pin.toString()) {
+        return res.status(400).json({ success: false, error: 'El PIN es incorrecto o ha expirado.' });
+    }
+
+    const validationError = isValidPassword(newPassword);
+    if (validationError) return res.status(400).json({ success: false, error: validationError });
+
+    try {
+        const userId = req.session.recoveryUserId;
+        const hash = await bcrypt.hash(newPassword, 10);
+
+        if (userId.startsWith('A')) {
+            await db.query("UPDATE student_data SET password_hash = ? WHERE matricula = ?", [hash, userId]);
+        } else {
+            await db.query("UPDATE teacher_data SET password_hash = ? WHERE nomina = ?", [hash, userId]);
+        }
+
+        req.session.recoveryPin = null;
+        req.session.recoveryUserId = null;
+
+        res.json({ success: true, message: 'Contraseña actualizada correctamente.' });
+    } catch (err) {
+        console.error("Reset password error:", err);
+        res.status(500).json({ success: false, error: "Error interno del servidor" });
     }
 });
 
