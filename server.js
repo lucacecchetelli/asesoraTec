@@ -263,15 +263,14 @@ app.post('/api/notify-students', async (req, res) => {
             to: destinatarios,
             subject: `Nueva Asesoría Asignada: ${className}`,
             html: `
-                <div style="font-family: Arial, sans-serif; color: #333;">
-                    <h2>¡Hola! Has sido ingresado a una nueva asesoría.</h2>
-                    <p>El profesor <strong>${profesor}</strong> te ha agregado a la siguiente sesión:</p>
-                    <ul>
-                        <li><strong>Materia:</strong> ${className}</li>
-                        <li><strong>Lugar/Modalidad:</strong> ${place}</li>
-                        <li><strong>Horario:</strong> ${time} hrs</li>
-                    </ul>
-                    <p>¡Te esperamos!</p>
+                <div style="font-family: Arial, sans-serif; color: #333; padding: 20px;">
+                    <h3 style="color: #0033a0;">Notificación de AsesoraTec</h3>
+                    <p>Hola,</p>
+                    <p>Se ha generado un código de verificación para tu perfil en la plataforma de asesorías.</p>
+                    <p>Tu código temporal es: <strong style="font-size: 18px; color: #0033a0;">${recoveryPin}</strong></p>
+                    <p>Si no solicitaste este código, puedes ignorar este mensaje.</p>
+                    <br>
+                    <p style="font-size: 12px; color: #666;">Saludos cordiales,<br>Equipo de AsesoraTec</p>
                 </div>
             `
         });
