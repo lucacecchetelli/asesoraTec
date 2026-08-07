@@ -27,13 +27,10 @@ export const db = mysql.createPool({
 
 const transporter = nodemailer.createTransport({
     service: 'gmail',
-    port: 587,
-    secure: false,
     auth: {
         user: process.env.OUTLOOK_EMAIL,
         pass: process.env.OUTLOOK_PASSWORD
     },
-    tls: { ciphers: 'SSLv3' }
 });
 
 app.use(express.json());
