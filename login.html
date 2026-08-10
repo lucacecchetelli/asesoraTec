@@ -10,6 +10,28 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        .cancel-btn {
+            background-color: transparent;
+            color: #666;
+            border: none;
+            padding: 10px;
+            width: 100%;
+            cursor: pointer;
+            margin-top: 10px;
+            font-size: 14px;
+            text-decoration: underline;
+        }
+        .cancel-btn:hover {
+            color: #333;
+        }
+        .info-text {
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+    </style>
 </head>
 
 <body>
@@ -22,7 +44,7 @@
     <main class="main">
         <div class="login-box">
             <div class="login-logo">
-            <img src="asesoratec.png" alt="asesoratec" width="250" height=/>
+            <img src="asesoratec.png" alt="asesoratec" width="250" />
             </div>
 
             <h1 class="login-title">AsesoraTec</h1>
@@ -53,20 +75,74 @@
                 </button>
 
                 <p id="error" class="error-text"></p>
+                
+                <div class="links" id="loginLinks">
+                    <a href="#" onclick="showRecoveryStep1()">¿Olvidaste tu contraseña?</a>
+                    <a href="set-password.html">Crear cuenta</a>
+                </div>
             </form>
-
+            
             <script src="login.js"></script>
 
-            <div class="links">
-                <a href="#" onclick="recoverPassword()">¿Olvidaste tu contraseña?</a>
-                <a href="set-password.html">Crear cuenta</a>
-            </div>
+            <form id="recoveryStep1Form" style="display: none;">
+                <p class="info-text">Ingresa tu matrícula o nómina para recibir un código de recuperación en tu correo institucional.</p>
+                
+                <div class="input-group">
+                    <input
+                        id="recoveryId"
+                        type="text"
+                        placeholder="ej. A01234567 o L01234567"
+                        required
+                    />
+                </div>
+
+                <button type="submit" class="login-btn">
+                    Enviar código
+                </button>
+                <button type="button" class="cancel-btn" onclick="showLoginForm()">
+                    Cancelar
+                </button>
+
+                <p id="recoveryMsg1" class="error-text"></p>
+            </form>
+
+            <form id="recoveryStep2Form" style="display: none;">
+                <p class="info-text">Ingresa el código que enviamos a tu correo y tu nueva contraseña.</p>
+                
+                <div class="input-group">
+                    <input
+                        id="recoveryPin"
+                        type="text"
+                        placeholder="Código PIN (5 dígitos)"
+                        required
+                    />
+                </div>
+
+                <div class="input-group">
+                    <input
+                        id="newPassword"
+                        type="password"
+                        placeholder="Nueva contraseña (5 dígitos numéricos)"
+                        required
+                    />
+                </div>
+
+                <button type="submit" class="login-btn">
+                    Cambiar contraseña
+                </button>
+                <button type="button" class="cancel-btn" onclick="showLoginForm()">
+                    Cancelar
+                </button>
+
+                <p id="recoveryMsg2" class="error-text"></p>
+            </form>
+
         </div>
     </main>
 
     <footer class="footer">
         <div>
-            <a href="#">Aviso de privacidad</a> · <a href="#">Ethos</a>
+            <a href="https://tec.mx/es/avisos-de-privacidad">Aviso de privacidad</a> · <a href="https://letica.mx/ethos?locale=es">Ethos</a>
         </div>
         <div>
             © 2026 Tecnológico de Monterrey
@@ -74,9 +150,27 @@
     </footer>
 
     <script>
-        async function recoverPassword() {
-            const identificador = prompt("Ingresa tu nómina o matrícula (ej. A0... o L0...):");
-            if (!identificador) return;
+        function showLoginForm() {
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('recoveryStep1Form').style.display = 'none';
+            document.getElementById('recoveryStep2Form').style.display = 'none';
+        }
+
+        function showRecoveryStep1() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('recoveryStep1Form').style.display = 'block';
+            document.getElementById('recoveryStep2Form').style.display = 'none';
+            document.getElementById('recoveryMsg1').innerText = '';
+            document.getElementById('recoveryId').value = '';
+        }
+
+        document.getElementById('recoveryStep1Form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const identificador = document.getElementById('recoveryId').value;
+            const msgEl = document.getElementById('recoveryMsg1');
+            
+            msgEl.style.color = '#333';
+            msgEl.innerText = 'Enviando correo...';
 
             try {
                 const response = await fetch('/api/recover-password', {
@@ -87,16 +181,34 @@
                 const data = await response.json();
 
                 if (!data.success) {
-                    alert(data.error || "Error al solicitar la recuperación.");
+                    msgEl.style.color = 'var(--error-color, red)';
+                    msgEl.innerText = data.error || "Error al solicitar la recuperación.";
                     return;
                 }
 
-                const pin = prompt("Te hemos enviado un código a tu correo. Ingrésalo aquí:");
-                if (!pin) return;
+                document.getElementById('recoveryStep1Form').style.display = 'none';
+                document.getElementById('recoveryStep2Form').style.display = 'block';
+                document.getElementById('recoveryMsg2').innerText = '';
+                document.getElementById('recoveryPin').value = '';
+                document.getElementById('newPassword').value = '';
 
-                const newPassword = prompt("Ingresa tu nueva contraseña (5 dígitos numéricos sin repeticiones):");
-                if (!newPassword) return;
+            } catch (error) {
+                console.error(error);
+                msgEl.style.color = 'var(--error-color, red)';
+                msgEl.innerText = "Error de conexión con el servidor.";
+            }
+        });
 
+        document.getElementById('recoveryStep2Form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const pin = document.getElementById('recoveryPin').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const msgEl = document.getElementById('recoveryMsg2');
+            
+            msgEl.style.color = '#333';
+            msgEl.innerText = 'Actualizando contraseña...';
+
+            try {
                 const resetResponse = await fetch('/api/reset-password', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -106,15 +218,18 @@
 
                 if (resetData.success) {
                     alert("¡Contraseña cambiada exitosamente! Ya puedes iniciar sesión.");
+                    showLoginForm();
                 } else {
-                    alert(resetData.error || "Error al cambiar la contraseña.");
+                    msgEl.style.color = 'var(--error-color, red)';
+                    msgEl.innerText = resetData.error || "Error al cambiar la contraseña.";
                 }
 
             } catch (error) {
                 console.error(error);
-                alert("Error de conexión con el servidor. Intenta nuevamente.");
+                msgEl.style.color = 'var(--error-color, red)';
+                msgEl.innerText = "Error de conexión con el servidor.";
             }
-        }
+        });
     </script>
 
 </body>
