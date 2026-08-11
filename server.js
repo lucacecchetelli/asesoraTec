@@ -257,7 +257,7 @@ app.post('/api/notify-students', async (req, res) => {
     const { matriculas, className, place, time, profesor } = req.body;
 
     try {
-        const destinatarios = matriculas.map(m => `${m}@tec.mx`);
+        const destinatariosArr = matriculas.map(m => `${m.toLowerCase()}@tec.mx`);
 
         if (req.session && req.session.user && req.session.user.id) {
             const [teacher] = await db.query('SELECT correo FROM teacher_data WHERE nomina = ?', [req.session.user.id]);
@@ -266,11 +266,11 @@ app.post('/api/notify-students', async (req, res) => {
             }
         }
 
-        const destinatarios = destinatariosArr.join(', ');
+        const correosFinales = destinatariosArr.join(', ');
 
         await transporter.sendMail({
             from: `"AsesoraTec" <${process.env.OUTLOOK_EMAIL}>`,
-            to: destinatarios,
+            to: correosFinales,
             subject: `Nueva Asesoría Asignada: ${className}`,
             html: `
                 <div style="font-family: Arial, sans-serif; color: #333; padding: 20px;">
