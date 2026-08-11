@@ -255,9 +255,19 @@ app.get('/api/director/students', async (req, res) => {
 
 app.post('/api/notify-students', async (req, res) => {
     const { matriculas, className, place, time, profesor } = req.body;
-    const destinatarios = matriculas.map(m => `${m}@tec.mx`).join(', ');
 
     try {
+        const destinatarios = matriculas.map(m => `${m}@tec.mx`);
+
+        if (req.session && req.session.user && req.session.user.id) {
+            const [teacher] = await db.query('SELECT correo FROM teacher_data WHERE nomina = ?', [req.session.user.id]);
+            if (teacher.length > 0 && teacher[0].correo) {
+                destinatariosArr.push(teacher[0].correo);
+            }
+        }
+
+        const destinatarios = destinatariosArr.join(', ');
+
         await transporter.sendMail({
             from: `"AsesoraTec" <${process.env.OUTLOOK_EMAIL}>`,
             to: destinatarios,
@@ -272,7 +282,7 @@ app.post('/api/notify-students', async (req, res) => {
                     <br>
                     <p style="font-size: 12px; color: #666;">Saludos cordiales,<br>Equipo de AsesoraTec</p>
                 </div>
-            `
+             `
         });
         res.json({ success: true, message: 'Correos enviados exitosamente' });
     } catch (error) {

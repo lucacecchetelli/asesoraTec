@@ -180,6 +180,11 @@
             <h3>Lista de Asistencia</h3>
             <p id="attendanceTarget" style="margin-bottom: 15px; color: var(--text-muted);">Materia</p>
             
+            <div style="margin-bottom: 15px; display: flex; gap: 10px;">
+                <input type="text" id="extraStudentInput" placeholder="Matrícula del alumno (ej. A01234567)" class="options-bar" style="flex: 1;">
+                <button onclick="addExtraStudent()" class="primary-btn" style="padding: 0 15px;">Añadir</button>
+            </div>
+
             <div id="attendanceList" style="background: var(--glass-bg); padding: 10px; border-radius: 8px; margin-bottom: 15px; max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
             </div>
 
