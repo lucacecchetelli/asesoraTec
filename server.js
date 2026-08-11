@@ -271,18 +271,23 @@ app.post('/api/notify-students', async (req, res) => {
         await transporter.sendMail({
             from: `"AsesoraTec" <${process.env.OUTLOOK_EMAIL}>`,
             to: correosFinales,
-            subject: `Nueva Asesoría Asignada: ${className}`,
+            subject: `Detalles de tu asesoría: ${className}`,
+            text: `Hola,\n\nTe confirmamos los detalles de la asesoría programada:\n\nMateria: ${className}\nProfesor: ${profesor}\nHorario: ${time}\nLugar/Enlace: ${place}\n\nSaludos cordiales,\nEquipo de AsesoraTec`,
             html: `
                 <div style="font-family: Arial, sans-serif; color: #333; padding: 20px;">
-                    <h3 style="color: #0033a0;">Notificación de AsesoraTec</h3>
+                    <h3 style="color: #0033a0;">Confirmación de sesión</h3>
                     <p>Hola,</p>
-                    <p>Se ha generado un código de verificación para tu perfil en la plataforma de asesorías.</p>
-                    <p>Tu código temporal es: <strong style="font-size: 18px; color: #0033a0;">${recoveryPin}</strong></p>
-                    <p>Si no solicitaste este código, puedes ignorar este mensaje.</p>
+                    <p>Te confirmamos los detalles de la asesoría programada:</p>
+                    <ul>
+                        <li><strong>Materia:</strong> ${className}</li>
+                        <li><strong>Profesor:</strong> ${profesor}</li>
+                        <li><strong>Horario:</strong> ${time}</li>
+                        <li><strong>Lugar/Enlace:</strong> ${place}</li>
+                    </ul>
                     <br>
                     <p style="font-size: 12px; color: #666;">Saludos cordiales,<br>Equipo de AsesoraTec</p>
                 </div>
-             `
+            `
         });
         res.json({ success: true, message: 'Correos enviados exitosamente' });
     } catch (error) {
@@ -315,11 +320,17 @@ app.post('/api/recover-password', async (req, res) => {
         await transporter.sendMail({
             from: `"Soporte AsesoraTec" <${process.env.OUTLOOK_EMAIL}>`,
             to: destinatario,
-            subject: 'Recuperación de Contraseña - AsesoraTec',
+            subject: 'Código de acceso temporal - AsesoraTec',
+            text: `Hola,\n\nTu código temporal para acceder es: ${recoveryPin}\n\nSi no solicitaste este código, puedes ignorar este mensaje de forma segura.\n\nSaludos cordiales,\nEquipo de AsesoraTec`,
             html: `
-                <h3>Recuperación de acceso</h3>
-                <p>Tu código temporal para cambiar la contraseña es: <strong>${recoveryPin}</strong></p>
-                <p>Si no solicitaste este cambio, ignora este correo.</p>
+                <div style="font-family: Arial, sans-serif; color: #333; padding: 20px;">
+                    <h3 style="color: #0033a0;">Detalles de tu acceso</h3>
+                    <p>Hola,</p>
+                    <p>Tu código temporal para acceder a la plataforma es: <strong style="font-size: 18px; color: #0033a0;">${recoveryPin}</strong></p>
+                    <p>Si no solicitaste este código, puedes ignorar este correo de forma segura.</p>
+                    <br>
+                    <p style="font-size: 12px; color: #666;">Saludos cordiales,<br>Equipo de AsesoraTec</p>
+                </div>
             `
         });
 
