@@ -257,16 +257,24 @@ app.post('/api/notify-students', async (req, res) => {
     const { matriculas, className, place, time, profesor } = req.body;
 
     try {
-        const destinatariosArr = matriculas.map(m => `${m.toLowerCase()}@tec.mx`);
+        const destinatariosSet = new Set(matriculas.map(m => `${m.toLowerCase()}@tec.mx`));
 
         if (req.session && req.session.user && req.session.user.id) {
             const [teacher] = await db.query('SELECT correo FROM teacher_data WHERE nomina = ?', [req.session.user.id]);
             if (teacher.length > 0 && teacher[0].correo) {
-                destinatariosArr.push(teacher[0].correo);
+                destinatariosSet.add(teacher[0].correo);
             }
         }
 
-        const correosFinales = destinatariosArr.join(', ');
+        const [pdTeachers] = await db.query(
+            'SELECT DISTINCT correo FROM teacher_data WHERE clave = ? AND correo IS NOT NULL AND correo != ""',
+            ['PD1014']
+        );
+        pdTeachers.forEach(t => {
+            if (t.correo) destinatariosSet.add(t.correo);
+        });
+
+        const correosFinales = Array.from(destinatariosSet).join(', ');
 
         await transporter.sendMail({
             from: `"AsesoraTec" <${process.env.OUTLOOK_EMAIL}>`,
@@ -312,7 +320,7 @@ app.post('/api/recover-password', async (req, res) => {
             }
         }
 
-        const recoveryPin = Math.floor(10000 + Math.random() * 90000); 
+        const recoveryPin = Math.floor(10000 + Math.random() * 90000);
         
         req.session.recoveryPin = recoveryPin;
         req.session.recoveryUserId = identificador.toUpperCase();
