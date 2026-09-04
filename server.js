@@ -310,7 +310,7 @@ app.post('/api/recover-password', async (req, res) => {
     
     try {
         if (identificador.toLowerCase().startsWith('a0')) {
-            destinatario = `${identificador.toLowerCase()}@tec.mx`;
+            destinatario = `${identificador.toLowerCase()}`;
         } else {
             const [teacher] = await db.query('SELECT correo FROM teacher_data WHERE nomina = ?', [identificador]);
             if (teacher.length > 0) {
