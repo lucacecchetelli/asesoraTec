@@ -90,11 +90,23 @@ app.get('/api/student/:matricula', async (req, res) => {
             WHERE sc.matricula = ?
         `, [studentId]);
 
+        const [advisoriesRows] = await db.query(`
+            SELECT td.CRN as crn, td.clave, td.materia, td.grupo, td.profesor, td.correo
+            FROM teacher_data td
+            WHERE td.clave IN (
+                SELECT DISTINCT td_inner.clave 
+                FROM student_classes sc
+                JOIN teacher_data td_inner ON sc.crn = td_inner.CRN
+                WHERE sc.matricula = ?
+            )
+        `, [studentId]);
+
         const studentData = {
             MATRICULA: profileRows[0].matricula,
             PROGRAMA: profileRows[0].carrera,
             "Estatus acad": profileRows[0].estatus_academico || "Regular",
-            classes: classRows
+            classes: classRows,
+            advisories: advisoriesRows
         };
         
         res.json(studentData);
