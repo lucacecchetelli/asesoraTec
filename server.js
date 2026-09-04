@@ -269,6 +269,14 @@ app.post('/api/notify-students', async (req, res) => {
     const { matriculas, className, place, time, profesor } = req.body;
 
     try {
+        for (const matricula of matriculas) {
+            await db.query(
+                `INSERT INTO kv_store (matricula, materia, profesor, horario, lugar) 
+                VALUES (?, ?, ?, ?, ?)`,
+                [matricula, className, profesor, time, place]
+            );
+        }
+        
         const destinatariosSet = new Set(matriculas.map(m => `${m.toLowerCase()}@tec.mx`));
 
         if (req.session && req.session.user && req.session.user.id) {
